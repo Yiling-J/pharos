@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from pharos import models
+from pharos import models, operators
 
 
 @mock.patch('pharos.query.DynamicClient')
@@ -69,3 +69,34 @@ class DeploymentTestCase(TestCase):
             owner__in=[mock_owner, mock_owner2]
         )
         self.assertEqual(len(query), 3)
+
+
+class CustomModel(models.K8sModel):
+    task = models.QueryField(operator=operators.JsonPathOperator, path='job.task')
+
+    class Meta:
+        api_version = 'v1'
+        kind = 'CustomModel'
+
+
+class CustomModelTestCase(TestCase):
+
+    def test_custom_model(self):
+        mock_data = {
+            'kind': 'CustomModel',
+            'job': {
+                'task': 'task1'
+            },
+            'metadata': {
+                'name': 'custom',
+                'namespace': 'default'
+            }
+        }
+        mock_obj = CustomModel(
+            client=None,
+            k8s_object=mock_data
+        )
+
+        self.assertEqual(mock_obj.task, 'task1')
+        self.assertEqual(mock_obj.name, 'custom')
+        self.assertEqual(mock_obj.namespace, 'default')

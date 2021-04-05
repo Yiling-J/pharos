@@ -25,7 +25,7 @@ class ClientValueOperator(BaseOperator):
 
     def get_value(self, obj):
         jsonpath_expr = parse(self.path)
-        matches = jsonpath_expr.find(obj)
+        matches = jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
 
     def update_queryset(self, qs, value, op):
@@ -38,8 +38,21 @@ class JsonPathOperator(BaseOperator):
 
     def get_value(self, obj):
         jsonpath_expr = parse(self.path)
-        matches = jsonpath_expr.find(obj)
+        matches = jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
+
+    def update_queryset(self, qs, value, op):
+        jsonpath_expr = parse(self.path)
+        if op == 'EQUAL':
+            qs._result_cache = [
+                i for i in qs if jsonpath_expr.find(i)[:1] == [value]
+            ]
+        elif op == 'IN':
+            qs._result_cache = [
+                i for i in qs if jsonpath_expr.find(i)[:1] in value
+            ]
+        else:
+            raise
 
 
 class OwnerRefOperator(BaseOperator):
