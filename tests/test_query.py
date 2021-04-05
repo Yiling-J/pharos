@@ -51,11 +51,21 @@ class DeploymentTestCase(TestCase):
 
         mock_response = [
             {'id': 1, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '123'}]}},
-            {'id': 2, 'metadata': {'ownerReferences': [{'kind': 'Appl', 'uid': '1'}]}},
-            {'id': 3, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '12'}]}},
+            {'id': 2, 'metadata': {'ownerReferences': [{'kind': 'Appl', 'uid': '124'}]}},
+            {'id': 3, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '125'}]}},
             {'id': 4, 'metadata': {'ownerReferences': [{'kind': 'Apple'}]}},
             {'id': 6, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '123'}]}}
         ]
         m.return_value.resources.get.return_value = mock_response
         query = models.Deployment.objects.using('a').filter(owner=mock_owner)
         self.assertEqual(len(query), 2)
+
+        mock_owner2 = models.Deployment(
+            client=None,
+            k8s_object={'kind': 'Apple', 'metadata': {'uid': '124'}}
+        )
+
+        query = models.Deployment.objects.using('a').filter(
+            owner__in=[mock_owner, mock_owner2]
+        )
+        self.assertEqual(len(query), 3)

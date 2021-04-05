@@ -18,10 +18,17 @@ class QuerySet:
     def filter(self, **kwargs):
         clone = self._clone()
         for k, v in kwargs.items():
-            field = getattr(clone.model, k, None)
+            op = 'EQUAL'
+            field = k
+            if '__' in k:
+                field, op = k.rsplit('__', 1)
+                op = op.upper()
+            field = getattr(clone.model, field, None)
             if not field:
                 raise
-            clone._query.append({'operator': field.operator, 'value': v})
+            clone._query.append(
+                {'operator': field.operator, 'value': v, 'op': op}
+            )
         return clone
 
     def all(self):
@@ -53,7 +60,7 @@ class QuerySet:
         client = DynamicClient(self._client)
 
         for item in [i for i in self._query if i['operator'].type == 'PRE']:
-            item['operator'].update_queryset(self, item['value'])
+            item['operator'].update_queryset(self, item['value'], item['op'])
         results = client.resources.get(
             api_version=self.model.Meta.api_version,
             kind=self.model.Meta.kind,
@@ -62,7 +69,7 @@ class QuerySet:
         self._result_cache = results
 
         for item in [i for i in self._query if i['operator'].type == 'POST']:
-            item['operator'].update_queryset(self, item['value'])
+            item['operator'].update_queryset(self, item['value'], item['op'])
 
         self._result_cache = [self.model(
             client=self._client,
