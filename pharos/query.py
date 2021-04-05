@@ -65,7 +65,7 @@ class QuerySet:
             item['operator'].update_queryset(self, item['value'])
 
         self._result_cache = [self.model(
-            _client=self._client,
+            client=self._client,
             k8s_object=i
         ) for i in self._result_cache]
         return self._result_cache

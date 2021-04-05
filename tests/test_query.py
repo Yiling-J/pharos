@@ -38,12 +38,16 @@ class DeploymentTestCase(TestCase):
         print(m.return_value.method_calls)
 
     def test_owner(self, m):
-        mock_owner = {
+        mock_data = {
             'kind': 'Apple',
             'metadata': {
                 'uid': '123'
             }
         }
+        mock_owner = models.Deployment(
+            client=None,
+            k8s_object=mock_data
+        )
 
         mock_response = [
             {'id': 1, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '123'}]}},

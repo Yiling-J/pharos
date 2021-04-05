@@ -50,9 +50,9 @@ class K8sModel:
     objects = managers.Manager()
     client = None
 
-    def __init__(self, k8s_object, _client):
+    def __init__(self, k8s_object, client):
         self.k8s_object = k8s_object
-        self._client = _client
+        self._client = client
 
 
 class ReplicaSet(K8sModel):

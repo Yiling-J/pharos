@@ -49,7 +49,7 @@ class OwnerRefOperator(BaseOperator):
         return obj['metadata'].get('ownerReferences')
 
     def update_queryset(self, qs, owner):
-        uid = owner['metadata']['uid']
+        uid = owner.k8s_object['metadata']['uid']
         jsonpath_expr = parse(
             f'$.metadata.ownerReferences[?(@.uid=="{uid}")]'
         )
