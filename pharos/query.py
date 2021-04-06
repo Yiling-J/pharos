@@ -1,3 +1,6 @@
+from pharos import exceptions
+
+
 class QuerySet:
     """Represent a lazy database lookup for a set of objects."""
 
@@ -22,7 +25,7 @@ class QuerySet:
                 op = op.upper()
             field = getattr(clone.model, field, None)
             if not field:
-                raise
+                raise exceptions.FieldDoesNotExist()
             clone._query.append({"operator": field.operator, "value": v, "op": op})
         return clone
 
@@ -35,8 +38,8 @@ class QuerySet:
         if num == 1:
             return clone._result_cache[0]
         if not num:
-            raise
-        raise
+            raise exceptions.ObjectDoesNotExist()
+        raise exceptions.MultipleObjectsReturned()
 
     def __repr__(self):
         data = list(self)
