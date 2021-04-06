@@ -1,4 +1,5 @@
 import inspect
+from pharos import exceptions
 from pharos.query import QuerySet
 
 
@@ -14,7 +15,6 @@ class BaseManager:
         self._client = None
 
     def __str__(self):
-        """Return "app_label.model_label.manager_name"."""
         return "%s.%s" % (self.model, self.name)
 
     def __class_getitem__(cls, *args, **kwargs):
@@ -53,14 +53,7 @@ class BaseManager:
             },
         )
 
-    def using(self, client):
-        self._client = client
-        return self
-
     def get_queryset(self):
-
-        if not self._client:
-            raise
 
         if not self.owner:
             return self._queryset_class(model=self.model, using=self._client)

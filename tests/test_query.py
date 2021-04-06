@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from pharos import models, operators
+from pharos import models, operators, exceptions
 
 
 class BaseCase(TestCase):
@@ -9,6 +9,11 @@ class BaseCase(TestCase):
 
 
 class DeploymentTestCase(BaseCase):
+
+    def test_no_client(self):
+        with self.assertRaises(exceptions.ClientNotSet):
+            len(models.Deployment.objects.all())
+
     def test_deployment_query_basic(self):
         test_cases = [
             {
