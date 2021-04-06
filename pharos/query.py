@@ -78,6 +78,20 @@ class QuerySet:
         if self._result_cache is None:
             self._get_result()
 
+    def __getitem__(self, k):
+        if not isinstance(k, (int, slice)):
+            raise TypeError(
+                'QuerySet indices must be integers or slices, not %s.'
+                % type(k).__name__
+            )
+        assert ((not isinstance(k, slice) and (k >= 0)) or
+                (isinstance(k, slice) and (k.start is None or k.start >= 0) and
+                 (k.stop is None or k.stop >= 0))), \
+            "Negative indexing is not supported."
+
+        self._fetch_all()
+        return self._result_cache[k]
+
     def _clone(self):
         c = self.__class__(
             model=self.model,
