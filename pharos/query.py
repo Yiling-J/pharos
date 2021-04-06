@@ -61,12 +61,16 @@ class QuerySet:
 
         for item in [i for i in self._query if i['operator'].type == 'PRE']:
             item['operator'].update_queryset(self, item['value'], item['op'])
-        results = client.resources.get(
+        api = client.resources.get(
             api_version=self.model.Meta.api_version,
-            kind=self.model.Meta.kind,
-            **self.api_kwargs
+            kind=self.model.Meta.kind
         )
-        self._result_cache = results
+        result = api.get(**self.api_kwargs).to_dict()
+        if 'items' not in result:
+            result = [result]
+        else:
+            result = result['items']
+        self._result_cache = result
 
         for item in [i for i in self._query if i['operator'].type == 'POST']:
             item['operator'].update_queryset(self, item['value'], item['op'])

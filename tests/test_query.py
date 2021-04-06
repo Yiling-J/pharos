@@ -49,14 +49,15 @@ class DeploymentTestCase(TestCase):
             k8s_object=mock_data
         )
 
-        mock_response = [
+        mock_response = mock.Mock()
+        mock_response.to_dict.return_value = {'items': [
             {'id': 1, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '123'}]}},
             {'id': 2, 'metadata': {'ownerReferences': [{'kind': 'Appl', 'uid': '124'}]}},
             {'id': 3, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '125'}]}},
             {'id': 4, 'metadata': {'ownerReferences': [{'kind': 'Apple'}]}},
             {'id': 6, 'metadata': {'ownerReferences': [{'kind': 'Apple', 'uid': '123'}]}}
-        ]
-        m.return_value.resources.get.return_value = mock_response
+        ]}
+        m.return_value.resources.get.return_value.get.return_value = mock_response
         query = models.Deployment.objects.using('a').filter(owner=mock_owner)
         self.assertEqual(len(query), 2)
 
@@ -78,7 +79,8 @@ class DeploymentTestCase(TestCase):
                 'spec': {'selector': {'matchLabels': {'app': 'test'}}}
             }
         )
-        mock_rs_response = [
+        mock_rs_response = mock.Mock()
+        mock_rs_response.to_dict.return_value = {'items': [
             {'id': 1, 'metadata': {
                 'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '123'}],
                 'uid': '234'
@@ -91,16 +93,17 @@ class DeploymentTestCase(TestCase):
                 'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '123'}],
                 'uid': '236'
             }}
-        ]
+        ]}
 
-        mock_pod_response = [
+        mock_pod_response = mock.Mock()
+        mock_pod_response.to_dict.return_value = {'items': [
             {'id': 1, 'metadata': {'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '234'}]}},
             {'id': 2, 'metadata': {'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '235'}]}},
             {'id': 4, 'metadata': {'ownerReferences': [{'kind': 'ReplicaSet'}]}},
-        ]
+        ]}
 
         # pod come first because owner filter is POST operator
-        m.return_value.resources.get.side_effect = [
+        m.return_value.resources.get.return_value.get.side_effect = [
             mock_pod_response,
             mock_rs_response
         ]
