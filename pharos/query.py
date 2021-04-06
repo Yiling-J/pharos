@@ -1,6 +1,3 @@
-from kubernetes.dynamic import DynamicClient
-
-
 class QuerySet:
     """Represent a lazy database lookup for a set of objects."""
 
@@ -55,7 +52,7 @@ class QuerySet:
         return iter(self._result_cache)
 
     def _get_result(self):
-        client = DynamicClient(self._client)
+        client = self._client
 
         for item in [i for i in self._query if i["operator"].type == "PRE"]:
             item["operator"].update_queryset(self, item["value"], item["op"])

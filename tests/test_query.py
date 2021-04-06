@@ -2,16 +2,21 @@ from unittest import TestCase, mock
 from pharos import models, operators
 
 
-@mock.patch("pharos.query.DynamicClient")
-class DeploymentTestCase(TestCase):
-    def test_deployment_query_basic(self, m):
+class BaseCase(TestCase):
+
+    def setUp(self):
+        self.client = mock.Mock()
+
+
+class DeploymentTestCase(BaseCase):
+    def test_deployment_query_basic(self):
         test_cases = [
             {
-                "query": models.Deployment.objects.using("a").all(),
+                "query": models.Deployment.objects.using(self.client).all(),
                 "api_call": {"api_version": "v1", "kind": "Deployment"},
             },
             {
-                "query": models.Deployment.objects.using("a").filter(name="apple"),
+                "query": models.Deployment.objects.using(self.client).filter(name="apple"),
                 "api_call": {
                     "api_version": "v1",
                     "kind": "Deployment",
@@ -19,7 +24,7 @@ class DeploymentTestCase(TestCase):
                 },
             },
             {
-                "query": models.Deployment.objects.using("a").filter(
+                "query": models.Deployment.objects.using(self.client).filter(
                     name="apple", namespace="orange"
                 ),
                 "api_call": {
@@ -30,7 +35,7 @@ class DeploymentTestCase(TestCase):
                 },
             },
             {
-                "query": models.Deployment.objects.using("a")
+                "query": models.Deployment.objects.using(self.client)
                 .filter(name="apple")
                 .filter(namespace="orange"),
                 "api_call": {
@@ -41,7 +46,7 @@ class DeploymentTestCase(TestCase):
                 },
             },
             {
-                "query": models.Deployment.objects.using("a").filter(
+                "query": models.Deployment.objects.using(self.client).filter(
                     selector="app in (a)"
                 ),
                 "api_call": {
@@ -51,7 +56,7 @@ class DeploymentTestCase(TestCase):
                 },
             },
             {
-                "query": models.Deployment.objects.using("a")
+                "query": models.Deployment.objects.using(self.client)
                 .filter(selector="app in (a)")
                 .filter(selector="app=b"),
                 "api_call": {
@@ -61,12 +66,13 @@ class DeploymentTestCase(TestCase):
                 },
             },
         ]
+        self.client.resources.get.return_value.get.return_value.to_dict.return_value = []
         for case in test_cases:
             with self.subTest(case=case):
                 len(case["query"])
-        print(m.return_value.method_calls)
+        print(self.client.resources.method_calls)
 
-    def test_owner(self, m):
+    def test_owner(self):
         mock_data = {"kind": "Apple", "metadata": {"uid": "123"}}
         mock_owner = models.Deployment(client=None, k8s_object=mock_data)
 
@@ -92,22 +98,22 @@ class DeploymentTestCase(TestCase):
                 },
             ]
         }
-        m.return_value.resources.get.return_value.get.return_value = mock_response
-        query = models.Deployment.objects.using("a").filter(owner=mock_owner)
+        self.client.resources.get.return_value.get.return_value = mock_response
+        query = models.Deployment.objects.using(self.client).filter(owner=mock_owner)
         self.assertEqual(len(query), 2)
 
         mock_owner2 = models.Deployment(
             client=None, k8s_object={"kind": "Apple", "metadata": {"uid": "124"}}
         )
 
-        query = models.Deployment.objects.using("a").filter(
+        query = models.Deployment.objects.using(self.client).filter(
             owner__in=[mock_owner, mock_owner2]
         )
         self.assertEqual(len(query), 3)
 
-    def test_deployment_pods(self, m):
+    def test_deployment_pods(self):
         deployment = models.Deployment(
-            client="a",
+            client=self.client,
             k8s_object={
                 "metadata": {"uid": "123"},
                 "spec": {"selector": {"matchLabels": {"app": "test"}}},
@@ -160,7 +166,7 @@ class DeploymentTestCase(TestCase):
         }
 
         # pod come first because owner filter is POST operator
-        m.return_value.resources.get.return_value.get.side_effect = [
+        self.client.resources.get.return_value.get.side_effect = [
             mock_pod_response,
             mock_rs_response,
         ]
