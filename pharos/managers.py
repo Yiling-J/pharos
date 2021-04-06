@@ -53,14 +53,7 @@ class BaseManager:
             },
         )
 
-    def using(self, client):
-        self._client = client
-        return self
-
     def get_queryset(self):
-
-        if not self._client:
-            raise exceptions.ClientNotSet()
 
         if not self.owner:
             return self._queryset_class(model=self.model, using=self._client)

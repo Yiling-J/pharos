@@ -15,6 +15,10 @@ class QuerySet:
     def query(self):
         return self._query
 
+    def using(self, client):
+        self._client = client
+        return self
+
     def filter(self, **kwargs):
         clone = self._clone()
         for k, v in kwargs.items():
@@ -78,6 +82,9 @@ class QuerySet:
         return self._result_cache
 
     def _fetch_all(self):
+        if not self._client:
+            raise exceptions.ClientNotSet()
+
         if self._result_cache is None:
             self._get_result()
 
