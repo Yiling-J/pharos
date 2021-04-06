@@ -10,13 +10,15 @@ class RelatedField:
             self.through = through
 
     def __get__(self, obj, type=None):
-        manager = self.to.manager
-        manager.owner = obj
-        manager._client = obj._client
+        manager = self.to.objects
+        clone = manager.__class__()
+        clone.model = manager.model
+        clone.owner = obj
+        clone._client = obj._client
 
         if self.through:
-            manager.through = self.through
-        return manager
+            clone.through = self.through
+        return clone
 
 
 class QueryField:

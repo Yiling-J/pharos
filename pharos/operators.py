@@ -13,6 +13,14 @@ class BaseOperator:
 class SelectorOperator(BaseOperator):
     type = 'PRE'
 
+    def get_value(self, obj):
+        data = obj.k8s_object['spec'].get('selector')
+        if data:
+            labels = [f'{k}={v}' for k, v in data.get('matchLabels', {}).items()]
+            expressions = [f'{i["key"]} {i["operator"]} {tuple(i["values"])}' for i in data.get('matchExpressions', [])]
+            return ','.join(labels + expressions)
+        return None
+
     def update_queryset(self, qs, value, op):
         if 'label_selector' in qs.api_kwargs:
             qs.api_kwargs['label_selector'] += f',{value}'

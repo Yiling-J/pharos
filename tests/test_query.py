@@ -70,6 +70,43 @@ class DeploymentTestCase(TestCase):
         )
         self.assertEqual(len(query), 3)
 
+    def test_deployment_pods(self, m):
+        deployment = models.Deployment(
+            client='a',
+            k8s_object={
+                'metadata': {'uid': '123'},
+                'spec': {'selector': {'matchLabels': {'app': 'test'}}}
+            }
+        )
+        mock_rs_response = [
+            {'id': 1, 'metadata': {
+                'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '123'}],
+                'uid': '234'
+            }},
+            {'id': 2, 'metadata': {
+                'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '124'}],
+                'uid': '235'
+            }},
+            {'id': 3, 'metadata': {
+                'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '123'}],
+                'uid': '236'
+            }}
+        ]
+
+        mock_pod_response = [
+            {'id': 1, 'metadata': {'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '234'}]}},
+            {'id': 2, 'metadata': {'ownerReferences': [{'kind': 'ReplicaSet', 'uid': '235'}]}},
+            {'id': 4, 'metadata': {'ownerReferences': [{'kind': 'ReplicaSet'}]}},
+        ]
+
+        # pod come first because owner filter is POST operator
+        m.return_value.resources.get.side_effect = [
+            mock_pod_response,
+            mock_rs_response
+        ]
+
+        self.assertEqual(len(deployment.pods.all()), 1)
+
 
 class CustomModel(models.K8sModel):
     task = models.QueryField(operator=operators.JsonPathOperator, path='job.task')

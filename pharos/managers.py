@@ -16,7 +16,7 @@ class BaseManager:
 
     def __str__(self):
         """Return "app_label.model_label.manager_name"."""
-        return '%s.%s' % (self.model._meta.label, self.name)
+        return '%s.%s' % (self.model, self.name)
 
     def __class_getitem__(cls, *args, **kwargs):
         return cls
@@ -63,7 +63,7 @@ class BaseManager:
 
         selector = self.owner.selector
         if self.through:
-            owners = self.through.objects.filter(
+            owners = self.through.objects.using(self._client).filter(
                 selector=selector,
                 owner=self.owner
             )
