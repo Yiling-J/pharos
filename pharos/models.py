@@ -3,7 +3,6 @@ from pharos import operators
 
 
 class RelatedField:
-
     def __init__(self, to, through=None):
         self.to = to
         if through:
@@ -22,7 +21,6 @@ class RelatedField:
 
 
 class QueryField:
-
     def __init__(self, operator=None, path=None):
         self.operator = operator(path=path) or operators.JsonPathOperator(path=path)
         self.path = path
@@ -40,11 +38,9 @@ class QueryField:
 
 
 class K8sModel:
-    name = QueryField(
-        operator=operators.ClientValueOperator, path='metadata.name'
-    )
+    name = QueryField(operator=operators.ClientValueOperator, path="metadata.name")
     namespace = QueryField(
-        operator=operators.ClientValueOperator, path='metadata.namespace'
+        operator=operators.ClientValueOperator, path="metadata.namespace"
     )
     selector = QueryField(operator=operators.SelectorOperator)
     owner = QueryField(operator=operators.OwnerRefOperator)
@@ -58,25 +54,23 @@ class K8sModel:
 
 
 class ReplicaSet(K8sModel):
-
     class Meta:
-        api_version = 'v1'
-        kind = 'Replicaset'
+        api_version = "v1"
+        kind = "Replicaset"
 
 
 class Pod(K8sModel):
-
     class Meta:
-        api_version = 'v1'
-        kind = 'Pod'
+        api_version = "v1"
+        kind = "Pod"
 
 
 class Container(K8sModel):
     pod = RelatedField(Pod)
 
     class Meta:
-        api_version = 'v1'
-        kind = 'Container'
+        api_version = "v1"
+        kind = "Container"
 
 
 class Deployment(K8sModel):
@@ -84,5 +78,5 @@ class Deployment(K8sModel):
     pods = RelatedField(to=Pod, through=ReplicaSet)
 
     class Meta:
-        api_version = 'v1'
-        kind = 'Deployment'
+        api_version = "v1"
+        kind = "Deployment"

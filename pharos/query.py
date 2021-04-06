@@ -18,17 +18,15 @@ class QuerySet:
     def filter(self, **kwargs):
         clone = self._clone()
         for k, v in kwargs.items():
-            op = 'EQUAL'
+            op = "EQUAL"
             field = k
-            if '__' in k:
-                field, op = k.rsplit('__', 1)
+            if "__" in k:
+                field, op = k.rsplit("__", 1)
                 op = op.upper()
             field = getattr(clone.model, field, None)
             if not field:
                 raise
-            clone._query.append(
-                {'operator': field.operator, 'value': v, 'op': op}
-            )
+            clone._query.append({"operator": field.operator, "value": v, "op": op})
         return clone
 
     def all(self):
@@ -45,7 +43,7 @@ class QuerySet:
 
     def __repr__(self):
         data = list(self)
-        return '<%s %r>' % (self.__class__.__name__, data)
+        return "<%s %r>" % (self.__class__.__name__, data)
 
     def __len__(self):
         self._fetch_all()
@@ -59,26 +57,24 @@ class QuerySet:
     def _get_result(self):
         client = DynamicClient(self._client)
 
-        for item in [i for i in self._query if i['operator'].type == 'PRE']:
-            item['operator'].update_queryset(self, item['value'], item['op'])
+        for item in [i for i in self._query if i["operator"].type == "PRE"]:
+            item["operator"].update_queryset(self, item["value"], item["op"])
         api = client.resources.get(
-            api_version=self.model.Meta.api_version,
-            kind=self.model.Meta.kind
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
         result = api.get(**self.api_kwargs).to_dict()
-        if 'items' not in result:
+        if "items" not in result:
             result = [result]
         else:
-            result = result['items']
+            result = result["items"]
         self._result_cache = result
 
-        for item in [i for i in self._query if i['operator'].type == 'POST']:
-            item['operator'].update_queryset(self, item['value'], item['op'])
+        for item in [i for i in self._query if i["operator"].type == "POST"]:
+            item["operator"].update_queryset(self, item["value"], item["op"])
 
-        self._result_cache = [self.model(
-            client=self._client,
-            k8s_object=i
-        ) for i in self._result_cache]
+        self._result_cache = [
+            self.model(client=self._client, k8s_object=i) for i in self._result_cache
+        ]
         return self._result_cache
 
     def _fetch_all(self):
@@ -89,7 +85,6 @@ class QuerySet:
         c = self.__class__(
             model=self.model,
             using=self._client,
-
         )
         c._query = self._query
         return c
