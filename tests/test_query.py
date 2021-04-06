@@ -81,7 +81,10 @@ class DeploymentTestCase(BaseCase):
             "items": [
                 {
                     "id": 1,
-                    "metadata": {"ownerReferences": [{"kind": "Apple", "uid": "123"}]},
+                    "metadata": {
+                        "ownerReferences": [{"kind": "Apple", "uid": "123"}],
+                        "name": "test"
+                    },
                 },
                 {
                     "id": 2,
@@ -110,6 +113,9 @@ class DeploymentTestCase(BaseCase):
             owner__in=[mock_owner, mock_owner2]
         )
         self.assertEqual(len(query), 3)
+
+        deployment = query[0]
+        self.assertEqual(deployment.name, 'test')
 
     def test_deployment_pods(self):
         deployment = models.Deployment(
