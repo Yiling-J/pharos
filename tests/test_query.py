@@ -13,13 +13,11 @@ class DeploymentTestCase(BaseCase):
         test_cases = [
             {
                 "query": models.Deployment.objects.using(self.client).all(),
-                "api_call": {"api_version": "v1", "kind": "Deployment"},
+                "api_call": {},
             },
             {
                 "query": models.Deployment.objects.using(self.client).filter(name="apple"),
                 "api_call": {
-                    "api_version": "v1",
-                    "kind": "Deployment",
                     "name": "apple",
                 },
             },
@@ -28,8 +26,6 @@ class DeploymentTestCase(BaseCase):
                     name="apple", namespace="orange"
                 ),
                 "api_call": {
-                    "api_version": "v1",
-                    "kind": "Deployment",
                     "name": "apple",
                     "namespace": "orange",
                 },
@@ -39,8 +35,6 @@ class DeploymentTestCase(BaseCase):
                 .filter(name="apple")
                 .filter(namespace="orange"),
                 "api_call": {
-                    "api_version": "v1",
-                    "kind": "Deployment",
                     "name": "apple",
                     "namespace": "orange",
                 },
@@ -50,8 +44,6 @@ class DeploymentTestCase(BaseCase):
                     selector="app in (a)"
                 ),
                 "api_call": {
-                    "api_version": "v1",
-                    "kind": "Deployment",
                     "label_selector": "app in (a)",
                 },
             },
@@ -60,8 +52,6 @@ class DeploymentTestCase(BaseCase):
                 .filter(selector="app in (a)")
                 .filter(selector="app=b"),
                 "api_call": {
-                    "api_version": "v1",
-                    "kind": "Deployment",
                     "label_selector": "app in (a),app=b",
                 },
             },
@@ -70,7 +60,15 @@ class DeploymentTestCase(BaseCase):
         for case in test_cases:
             with self.subTest(case=case):
                 len(case["query"])
-        print(self.client.resources.method_calls)
+                self.assertEqual(
+                    self.client.resources.method_calls,
+                    [mock.call.get(api_version='v1', kind='Deployment')]
+                )
+                self.assertEqual(
+                    self.client.resources.get.return_value.method_calls,
+                    [mock.call.get(**case['api_call'])]
+                )
+                self.client.reset_mock()
 
     def test_owner(self):
         mock_data = {"kind": "Apple", "metadata": {"uid": "123"}}
