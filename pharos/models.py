@@ -56,7 +56,7 @@ class K8sModel:
 class ReplicaSet(K8sModel):
     class Meta:
         api_version = "v1"
-        kind = "Replicaset"
+        kind = "ReplicaSet"
 
 
 class Pod(K8sModel):
