@@ -1,6 +1,6 @@
 # Pharos(WIP)
 
-Manage Kubernetes resources in Python.
+Managing Kubernetes resources in Python.
 
 
 ## Example
