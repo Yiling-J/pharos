@@ -43,6 +43,11 @@ class ClientValueOperator(BaseOperator):
         return qs
 
 
+def find_jsonpath_value(jsonpath_expr, data):
+    matches = [i.value for i in jsonpath_expr.find(data)]
+    return matches[0] if matches else None
+
+
 class JsonPathOperator(BaseOperator):
     type = "POST"
 
@@ -54,9 +59,9 @@ class JsonPathOperator(BaseOperator):
     def update_queryset(self, qs, value, op):
         jsonpath_expr = parse(self.path)
         if op == "EQUAL":
-            qs._result_cache = [i for i in qs if jsonpath_expr.find(i)[:1] == [value]]
+            qs._result_cache = [i for i in qs if find_jsonpath_value(jsonpath_expr, i) == value]
         elif op == "IN":
-            qs._result_cache = [i for i in qs if jsonpath_expr.find(i)[:1] in value]
+            qs._result_cache = [i for i in qs if find_jsonpath_value(jsonpath_expr, i) in value]
         else:
             raise
 
