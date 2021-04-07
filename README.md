@@ -31,4 +31,7 @@ class MyDeployment(Deployment):
 deployment = MyDeployment.objects.using(client).all()[0]
 print(deployment.uid)
 
+# also support filter custom fields
+deployments = MyDeployment.objects.using(client).filter(uid='123')
+
 ```

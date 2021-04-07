@@ -191,7 +191,7 @@ class CustomModel(models.K8sModel):
         kind = "CustomModel"
 
 
-class CustomModelTestCase(TestCase):
+class CustomModelTestCase(BaseCase):
     def test_custom_model(self):
         mock_data = {
             "kind": "CustomModel",
@@ -203,3 +203,30 @@ class CustomModelTestCase(TestCase):
         self.assertEqual(mock_obj.task, "task1")
         self.assertEqual(mock_obj.name, "custom")
         self.assertEqual(mock_obj.namespace, "default")
+
+    def test_custom_filed_filter(self):
+        mock_response = mock.Mock()
+        mock_response.to_dict.return_value = {
+            "items": [
+                {
+                    "id": 1,
+                    "job": {"task": "task1"}
+                },
+                {
+                    "id": 2,
+                    "job": {"task": "task2"}
+                },
+                {
+                    "id": 3,
+                    "job": {"task": "task3"}
+                },
+            ]
+        }
+        self.client.resources.get.return_value.get.return_value = mock_response
+        queryset = CustomModel.objects.using(self.client).filter(task='task3')
+        self.assertEqual(len(queryset), 1)
+        self.assertEqual(queryset[0].task, 'task3')
+        queryset = CustomModel.objects.using(self.client).filter(task__in=['task1', 'task3'])
+        self.assertEqual(len(queryset), 2)
+        self.assertEqual(queryset[0].task, 'task1')
+        self.assertEqual(queryset[1].task, 'task3')
