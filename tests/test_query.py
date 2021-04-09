@@ -5,7 +5,9 @@ from pharos import models, operators, exceptions
 class BaseCase(TestCase):
 
     def setUp(self):
+        self.k8s_client = mock.Mock()
         self.client = mock.Mock()
+        self.client.k8s_client = self.k8s_client
 
 
 class DeploymentTestCase(BaseCase):
@@ -61,19 +63,19 @@ class DeploymentTestCase(BaseCase):
                 },
             },
         ]
-        self.client.resources.get.return_value.get.return_value.to_dict.return_value = []
+        self.k8s_client.resources.get.return_value.get.return_value.to_dict.return_value = []
         for case in test_cases:
             with self.subTest(case=case):
                 len(case["query"])
                 self.assertEqual(
-                    self.client.resources.method_calls,
+                    self.k8s_client.resources.method_calls,
                     [mock.call.get(api_version='v1', kind='Deployment')]
                 )
                 self.assertEqual(
-                    self.client.resources.get.return_value.method_calls,
+                    self.k8s_client.resources.get.return_value.method_calls,
                     [mock.call.get(**case['api_call'])]
                 )
-                self.client.reset_mock()
+                self.k8s_client.reset_mock()
 
     def test_owner(self):
         mock_data = {"kind": "Apple", "metadata": {"uid": "123"}}
@@ -104,7 +106,7 @@ class DeploymentTestCase(BaseCase):
                 },
             ]
         }
-        self.client.resources.get.return_value.get.return_value = mock_response
+        self.k8s_client.resources.get.return_value.get.return_value = mock_response
         query = models.Deployment.objects.using(self.client).filter(owner=mock_owner)
         self.assertEqual(len(query), 2)
 
@@ -175,7 +177,7 @@ class DeploymentTestCase(BaseCase):
         }
 
         # pod come first because owner filter is POST operator
-        self.client.resources.get.return_value.get.side_effect = [
+        self.k8s_client.resources.get.return_value.get.side_effect = [
             mock_pod_response,
             mock_rs_response,
         ]
@@ -222,7 +224,7 @@ class CustomModelTestCase(BaseCase):
                 },
             ]
         }
-        self.client.resources.get.return_value.get.return_value = mock_response
+        self.k8s_client.resources.get.return_value.get.return_value = mock_response
         queryset = CustomModel.objects.using(self.client).filter(task='task3')
         self.assertEqual(len(queryset), 1)
         self.assertEqual(queryset[0].task, 'task3')

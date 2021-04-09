@@ -59,7 +59,10 @@ class QuerySet:
         return iter(self._result_cache)
 
     def _get_result(self):
-        client = self._client
+        client = self._client.k8s_client
+
+        if self._client.settings.disable_compress is False:
+            self.api_kwargs['header_params'] = {'Accept-Encoding': 'gzip'}
 
         for item in [i for i in self._query if i["operator"].type == "PRE"]:
             item["operator"].update_queryset(self, item["value"], item["op"])
