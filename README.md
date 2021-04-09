@@ -7,10 +7,10 @@ Managing Kubernetes resources in Python.
 
 ```python
 from pharos.models import Deployment
-from pharos.k8s_utils import get_client_from_config
+from pharos.client import Client
 
 
-client = get_client_from_config('YOUR_PATH/.kube/config')
+client = Client('YOUR_PATH/.kube/config')
 
 
 # select and get related
