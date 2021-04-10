@@ -29,15 +29,6 @@ class DeploymentTestCase(BaseCase):
                 },
             },
             {
-                "query": models.Deployment.objects.using(self.client).get(
-                    name="apple", namespace='orange'
-                ),
-                "api_call": {
-                    "name": "apple",
-                    "namespace": "orange"
-                },
-            },
-            {
                 "query": models.Deployment.objects.using(self.client).filter(
                     name="apple", namespace="orange"
                 ),
@@ -85,6 +76,14 @@ class DeploymentTestCase(BaseCase):
                     [mock.call.get(**case['api_call'])]
                 )
                 self.k8s_client.reset_mock()
+
+        models.Deployment.objects.using(self.client).get(
+            name="apple", namespace='orange'
+        )
+        self.assertEqual(
+            self.k8s_client.resources.get.return_value.method_calls,
+            [mock.call.get(name='apple', namespace='orange')]
+        )
 
     def test_owner(self):
         mock_data = {"kind": "Apple", "metadata": {"uid": "123"}}
