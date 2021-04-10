@@ -1,3 +1,4 @@
+from pharos import iterator
 from pharos import exceptions
 
 
@@ -66,14 +67,16 @@ class QuerySet:
 
         for item in [i for i in self._query if i["operator"].type == "PRE"]:
             item["operator"].update_queryset(self, item["value"], item["op"])
-        api = client.resources.get(
+        api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
-        result = api.get(**self.api_kwargs).to_dict()
-        if "items" not in result:
-            result = [result]
-        else:
-            result = result["items"]
+
+        iterator_class = iterator.SimpleIterator
+        if self._client.settings.enable_chunk:
+            iterator_class = iterator.ChunkIterator
+
+        api = iterator_class(self._client, api_spec)
+        result = api.get(**self.api_kwargs)
         self._result_cache = result
 
         for item in [i for i in self._query if i["operator"].type == "POST"]:

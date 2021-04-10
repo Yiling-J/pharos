@@ -7,6 +7,8 @@ class BaseCase(TestCase):
     def setUp(self):
         self.k8s_client = mock.Mock()
         self.client = mock.Mock()
+        self.client.settings.enable_chunk = True
+        self.client.settings.chunk_size = 100
         self.client.k8s_client = self.k8s_client
 
 
@@ -63,7 +65,10 @@ class DeploymentTestCase(BaseCase):
                 },
             },
         ]
-        self.k8s_client.resources.get.return_value.get.return_value.to_dict.return_value = []
+        self.k8s_client.resources.get.return_value.get.return_value.to_dict.side_effect = lambda: {
+            'metadata': {},
+            'items': ['test']
+        }
         for case in test_cases:
             with self.subTest(case=case):
                 len(case["query"])
@@ -73,7 +78,7 @@ class DeploymentTestCase(BaseCase):
                 )
                 self.assertEqual(
                     self.k8s_client.resources.get.return_value.method_calls,
-                    [mock.call.get(**case['api_call'])]
+                    [mock.call.get(**case['api_call'], _continue=None, limit=100)]
                 )
                 self.k8s_client.reset_mock()
 
@@ -82,7 +87,9 @@ class DeploymentTestCase(BaseCase):
         )
         self.assertEqual(
             self.k8s_client.resources.get.return_value.method_calls,
-            [mock.call.get(name='apple', namespace='orange')]
+            [mock.call.get(
+                name='apple', namespace='orange', _continue=None, limit=100
+            )]
         )
 
     def test_owner(self):
@@ -90,7 +97,8 @@ class DeploymentTestCase(BaseCase):
         mock_owner = models.Deployment(client=None, k8s_object=mock_data)
 
         mock_response = mock.Mock()
-        mock_response.to_dict.return_value = {
+        mock_response.to_dict.side_effect = lambda: {
+            "metadata": {},
             "items": [
                 {
                     "id": 1,
@@ -140,6 +148,7 @@ class DeploymentTestCase(BaseCase):
         )
         mock_rs_response = mock.Mock()
         mock_rs_response.to_dict.return_value = {
+            "metadata": {},
             "items": [
                 {
                     "id": 1,
@@ -167,6 +176,7 @@ class DeploymentTestCase(BaseCase):
 
         mock_pod_response = mock.Mock()
         mock_pod_response.to_dict.return_value = {
+            "metadata": {},
             "items": [
                 {
                     "id": 1,
@@ -186,8 +196,8 @@ class DeploymentTestCase(BaseCase):
 
         # pod come first because owner filter is POST operator
         self.k8s_client.resources.get.return_value.get.side_effect = [
-            mock_pod_response,
             mock_rs_response,
+            mock_pod_response,
         ]
 
         self.assertEqual(len(deployment.pods.all()), 1)
@@ -216,7 +226,8 @@ class CustomModelTestCase(BaseCase):
 
     def test_custom_filed_filter(self):
         mock_response = mock.Mock()
-        mock_response.to_dict.return_value = {
+        mock_response.to_dict.side_effect = lambda: {
+            "metadata": {},
             "items": [
                 {
                     "id": 1,
