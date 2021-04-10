@@ -4,7 +4,6 @@ class SimpleIterator:
         self.api_spec = api_spec
 
     def get(self, **kwargs):
-        kwargs['limit'] = 1
         result = self.api_spec.get(**kwargs).to_dict()
         if "items" not in result:
             result = [result]
