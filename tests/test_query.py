@@ -29,6 +29,15 @@ class DeploymentTestCase(BaseCase):
                 },
             },
             {
+                "query": models.Deployment.objects.using(self.client).get(
+                    name="apple", namespace='orange'
+                ),
+                "api_call": {
+                    "name": "apple",
+                    "namespace": "orange"
+                },
+            },
+            {
                 "query": models.Deployment.objects.using(self.client).filter(
                     name="apple", namespace="orange"
                 ),

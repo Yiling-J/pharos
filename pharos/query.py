@@ -37,7 +37,7 @@ class QuerySet:
         return self._clone()
 
     def get(self, **kwargs):
-        clone = self.filter(kwargs)
+        clone = self.filter(**kwargs)
         num = len(clone)
         if num == 1:
             return clone._result_cache[0]
