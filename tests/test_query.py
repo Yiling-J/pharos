@@ -18,6 +18,40 @@ class DeploymentTestCase(BaseCase):
         with self.assertRaises(exceptions.ClientNotSet):
             len(models.Deployment.objects.all())
 
+    def test_chunk_iterator(self):
+        mock_response = mock.Mock()
+        response_lambda = lambda token: {
+            "metadata": {'continue': token},
+            "items": [
+                {
+                    "id": token,
+                    "metadata": {
+                        "ownerReferences": [{"kind": "Apple", "uid": "123"}],
+                        "name": "test"
+                    },
+                }
+            ]
+        }
+
+        # should call 6 times, and get END signal, so 7 won't be called
+        mock_response.to_dict.side_effect = [
+            response_lambda(f'{i}') for i in [1, 2, 3, 4, 5, 'END', 7]
+        ]
+        self.k8s_client.resources.get.return_value.get.return_value = mock_response
+        query = models.Deployment.objects.using(self.client).all()
+        self.assertEqual(len(query), 6)
+        expected_call = [
+            mock.call.get(_continue=None, limit=100),
+            mock.call.get(_continue='1', limit=100),
+            mock.call.get(_continue='2', limit=100),
+            mock.call.get(_continue='3', limit=100),
+            mock.call.get(_continue='4', limit=100),
+            mock.call.get(_continue='5', limit=100)
+        ]
+        self.assertEqual(
+            self.k8s_client.resources.get.return_value.method_calls, expected_call
+         )
+
     def test_deployment_query_basic(self):
         test_cases = [
             {
