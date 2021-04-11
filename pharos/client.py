@@ -2,15 +2,10 @@ import kubernetes
 from collections import UserDict
 
 
-default_settings = {
-    'disable_compress': False,
-    'enable_chunk': True,
-    'chunk_size': 200
-}
+default_settings = {"disable_compress": False, "enable_chunk": True, "chunk_size": 200}
 
 
 class Settings(UserDict):
-
     def __init__(self):
         super().__init__()
         self.data.update(default_settings)
@@ -19,7 +14,7 @@ class Settings(UserDict):
         try:
             return self.data[name]
         except KeyError:
-            raise AttributeError('setting not found')
+            raise AttributeError("setting not found")
 
 
 class Client:

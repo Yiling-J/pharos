@@ -63,7 +63,7 @@ class QuerySet:
         client = self._client.k8s_client
 
         if self._client.settings.disable_compress is False:
-            self.api_kwargs['header_params'] = {'Accept-Encoding': 'gzip'}
+            self.api_kwargs["header_params"] = {"Accept-Encoding": "gzip"}
 
         for item in [i for i in self._query if i["operator"].type == "PRE"]:
             item["operator"].update_queryset(self, item["value"], item["op"])
@@ -97,13 +97,14 @@ class QuerySet:
     def __getitem__(self, k):
         if not isinstance(k, (int, slice)):
             raise TypeError(
-                'QuerySet indices must be integers or slices, not %s.'
+                "QuerySet indices must be integers or slices, not %s."
                 % type(k).__name__
             )
-        assert ((not isinstance(k, slice) and (k >= 0)) or
-                (isinstance(k, slice) and (k.start is None or k.start >= 0) and
-                 (k.stop is None or k.stop >= 0))), \
-            "Negative indexing is not supported."
+        assert (not isinstance(k, slice) and (k >= 0)) or (
+            isinstance(k, slice)
+            and (k.start is None or k.start >= 0)
+            and (k.stop is None or k.stop >= 0)
+        ), "Negative indexing is not supported."
 
         self._fetch_all()
         return self._result_cache[k]

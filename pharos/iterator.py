@@ -13,23 +13,22 @@ class SimpleIterator:
 
 
 class ChunkIterator(SimpleIterator):
-
     def get(self, **kwargs):
         chunk_size = self.client.settings.chunk_size
         _continue = None
-        END = 'END'
-        kwargs['limit'] = chunk_size
+        END = "END"
+        kwargs["limit"] = chunk_size
 
         while _continue != END:
-            kwargs['_continue'] = _continue
+            kwargs["_continue"] = _continue
             response = self.api_spec.get(**kwargs).to_dict()
 
             if "items" not in response:
                 yield response
                 break
 
-            _continue = response['metadata'].get('continue') or END
-            results = response['items']
+            _continue = response["metadata"].get("continue") or END
+            results = response["items"]
 
             while results:
                 yield results.pop(0)
