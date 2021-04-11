@@ -51,21 +51,20 @@ def find_jsonpath_value(jsonpath_expr, data):
 class JsonPathOperator(BaseOperator):
     type = "POST"
 
+    def __init__(self, path):
+        super().__init__(path)
+        self.jsonpath_expr = parse(self.path)
+
     def get_value(self, obj):
         jsonpath_expr = parse(self.path)
         matches = jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
 
-    def update_queryset(self, qs, value, op):
-        jsonpath_expr = parse(self.path)
+    def verify(self, obj, data, op):
         if op == "EQUAL":
-            qs._result_cache = [
-                i for i in qs if find_jsonpath_value(jsonpath_expr, i) == value
-            ]
+            return find_jsonpath_value(self.jsonpath_expr, obj) == data
         elif op == "IN":
-            qs._result_cache = [
-                i for i in qs if find_jsonpath_value(jsonpath_expr, i) in value
-            ]
+            return find_jsonpath_value(self.jsonpath_expr, obj) in data
         else:
             raise
 
@@ -73,16 +72,17 @@ class JsonPathOperator(BaseOperator):
 class OwnerRefOperator(BaseOperator):
     type = "POST"
 
+    def __init__(self, path):
+        self.path = "$.metadata.ownerReferences[*].uid"
+        self.jsonpath_expr = parse(self.path)
+
     def get_value(self, obj):
         return obj["metadata"].get("ownerReferences")
 
-    def update_queryset(self, qs, data, op):
+    def verify(self, obj, data, op):
         if op == "IN":
             values = {owner.k8s_object["metadata"]["uid"] for owner in data}
         else:
             values = {data.k8s_object["metadata"]["uid"]}
 
-        jsonpath_expr = parse(f"$.metadata.ownerReferences[*].uid")
-        qs._result_cache = [
-            i for i in qs if {m.value for m in jsonpath_expr.find(i)} & set(values)
-        ]
+        return bool({i.value for i in self.jsonpath_expr.find(obj)} & set(values))

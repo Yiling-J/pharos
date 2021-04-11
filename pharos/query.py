@@ -11,6 +11,7 @@ class QuerySet:
         self._result_cache = None
         self._query = []
         self.api_kwargs = {}
+        self._limit = None
 
     @property
     def query(self):
@@ -46,6 +47,10 @@ class QuerySet:
             raise exceptions.ObjectDoesNotExist()
         raise exceptions.MultipleObjectsReturned()
 
+    def limit(self, count):
+        self._limit = count
+        return self
+
     def __repr__(self):
         data = list(self)
         return "<%s %r>" % (self.__class__.__name__, data)
@@ -79,11 +84,21 @@ class QuerySet:
         result = api.get(**self.api_kwargs)
         self._result_cache = result
 
-        for item in [i for i in self._query if i["operator"].type == "POST"]:
-            item["operator"].update_queryset(self, item["value"], item["op"])
+        final = []
+        post_operators = [i for i in self._query if i["operator"].type == "POST"]
+        for obj in result:
+            valid = True
+            if len(final) == self._limit:
+                break
+            for i in post_operators:
+                valid = i["operator"].verify(obj, i["value"], i["op"])
+                if valid is False:
+                    break
+            if valid is True:
+                final.append(obj)
 
         self._result_cache = [
-            self.model(client=self._client, k8s_object=i) for i in self._result_cache
+            self.model(client=self._client, k8s_object=i) for i in final
         ]
         return self._result_cache
 
@@ -115,4 +130,5 @@ class QuerySet:
             using=self._client,
         )
         c._query = self._query
+        c._limit = self._limit
         return c

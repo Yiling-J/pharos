@@ -232,8 +232,8 @@ class DeploymentTestCase(BaseCase):
 
         # pod come first because owner filter is POST operator
         self.k8s_client.resources.get.return_value.get.side_effect = [
-            mock_rs_response,
             mock_pod_response,
+            mock_rs_response,
         ]
 
         self.assertEqual(len(deployment.pods.all()), 1)
