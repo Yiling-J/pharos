@@ -1,4 +1,5 @@
 from jsonpath_ng.ext import parse
+from pharos import exceptions
 
 
 class BaseOperator:
@@ -60,13 +61,16 @@ class JsonPathOperator(BaseOperator):
         matches = jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
 
-    def verify(self, obj, data, op):
+    def validate(self, obj, data, op):
         if op == "EQUAL":
-            return find_jsonpath_value(self.jsonpath_expr, obj) == data
+            valid = find_jsonpath_value(self.jsonpath_expr, obj) == data
         elif op == "IN":
-            return find_jsonpath_value(self.jsonpath_expr, obj) in data
+            valid = find_jsonpath_value(self.jsonpath_expr, obj) in data
         else:
-            raise
+            raise exceptions.OperatorNotValid()
+        if not valid:
+            raise exceptions.ValidationError()
+        return obj
 
 
 class OwnerRefOperator(BaseOperator):
@@ -79,10 +83,13 @@ class OwnerRefOperator(BaseOperator):
     def get_value(self, obj):
         return obj["metadata"].get("ownerReferences")
 
-    def verify(self, obj, data, op):
+    def validate(self, obj, data, op):
         if op == "IN":
             values = {owner.k8s_object["metadata"]["uid"] for owner in data}
         else:
             values = {data.k8s_object["metadata"]["uid"]}
 
-        return bool({i.value for i in self.jsonpath_expr.find(obj)} & set(values))
+        valid = bool({i.value for i in self.jsonpath_expr.find(obj)} & set(values))
+        if not valid:
+            raise exceptions.ValidationError()
+        return obj

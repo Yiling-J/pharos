@@ -91,8 +91,10 @@ class QuerySet:
             if len(final) == self._limit:
                 break
             for i in post_operators:
-                valid = i["operator"].verify(obj, i["value"], i["op"])
-                if valid is False:
+                try:
+                    obj = i["operator"].validate(obj, i["value"], i["op"])
+                except exceptions.ValidationError:
+                    valid = False
                     break
             if valid is True:
                 final.append(obj)
