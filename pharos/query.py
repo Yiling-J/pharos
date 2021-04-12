@@ -65,7 +65,7 @@ class QuerySet:
         return iter(self._result_cache)
 
     def _get_result(self):
-        client = self._client.k8s_client
+        client = self._client.dynamic_client
 
         if self._client.settings.disable_compress is False:
             self.api_kwargs["header_params"] = {"Accept-Encoding": "gzip"}
