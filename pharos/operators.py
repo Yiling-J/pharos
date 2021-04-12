@@ -10,8 +10,21 @@ class BaseOperator:
         raise
 
 
-class SelectorOperator(BaseOperator):
-    type = "PRE"
+class PreOperator(BaseOperator):
+    type = 'PRE'
+
+    def update_queryset(self, qs, value, op):
+        raise NotImplementedError()
+
+
+class PostOperator(BaseOperator):
+    type = 'POST'
+
+    def validate(self, obj, data, op):
+        raise NotImplementedError
+
+
+class SelectorOperator(PreOperator):
 
     def get_value(self, obj):
         data = obj.k8s_object["spec"].get("selector")
@@ -31,8 +44,7 @@ class SelectorOperator(BaseOperator):
             qs.api_kwargs["label_selector"] = value
 
 
-class ClientValueOperator(BaseOperator):
-    type = "PRE"
+class ClientValueOperator(PreOperator):
 
     def get_value(self, obj):
         jsonpath_expr = parse(self.path)
@@ -49,8 +61,7 @@ def find_jsonpath_value(jsonpath_expr, data):
     return matches[0] if matches else None
 
 
-class JsonPathOperator(BaseOperator):
-    type = "POST"
+class JsonPathOperator(PostOperator):
 
     def __init__(self, path):
         super().__init__(path)
@@ -73,8 +84,7 @@ class JsonPathOperator(BaseOperator):
         return obj
 
 
-class OwnerRefOperator(BaseOperator):
-    type = "POST"
+class OwnerRefOperator(PostOperator):
 
     def __init__(self, path):
         self.path = "$.metadata.ownerReferences[*].uid"
