@@ -34,4 +34,8 @@ print(deployment.uid)
 # also support filter custom fields
 deployments = MyDeployment.objects.using(client).filter(uid='123')
 
+
+# limit results
+pods = Pod.objects.all().limit(100)
+
 ```
