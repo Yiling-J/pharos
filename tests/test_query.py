@@ -4,11 +4,11 @@ from pharos import models, operators, exceptions
 
 class BaseCase(TestCase):
     def setUp(self):
-        self.k8s_client = mock.Mock()
+        self.dynamic_client = mock.Mock()
         self.client = mock.Mock()
         self.client.settings.enable_chunk = True
         self.client.settings.chunk_size = 100
-        self.client.k8s_client = self.k8s_client
+        self.client.dynamic_client = self.dynamic_client
 
 
 class DeploymentTestCase(BaseCase):
@@ -35,7 +35,7 @@ class DeploymentTestCase(BaseCase):
         mock_response.to_dict.side_effect = [
             response_lambda(f"{i}") for i in [1, 2, 3, 4, 5, "END", 7]
         ]
-        self.k8s_client.resources.get.return_value.get.return_value = mock_response
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
         query = models.Deployment.objects.using(self.client).all()
         self.assertEqual(len(query), 6)
         expected_call = [
@@ -47,7 +47,38 @@ class DeploymentTestCase(BaseCase):
             mock.call.get(_continue="5", limit=100),
         ]
         self.assertEqual(
-            self.k8s_client.resources.get.return_value.method_calls, expected_call
+            self.dynamic_client.resources.get.return_value.method_calls, expected_call
+        )
+
+    def test_limit_with_iterator(self):
+        mock_response = mock.Mock()
+        response_lambda = lambda token: {
+            "metadata": {"continue": token},
+            "items": [
+                {
+                    "id": token,
+                    "metadata": {
+                        "ownerReferences": [{"kind": "Apple", "uid": "123"}],
+                        "name": "test",
+                    },
+                }
+            ],
+        }
+
+        # should call 3 times only
+        mock_response.to_dict.side_effect = [
+            response_lambda(f"{i}") for i in [1, 2, 3, 4, 5, "END", 7]
+        ]
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        query = models.Deployment.objects.using(self.client).limit(3)
+        self.assertEqual(len(query), 3)
+        expected_call = [
+            mock.call.get(_continue=None, limit=100),
+            mock.call.get(_continue="1", limit=100),
+            mock.call.get(_continue="2", limit=100)
+        ]
+        self.assertEqual(
+            self.dynamic_client.resources.get.return_value.method_calls, expected_call
         )
 
     def test_deployment_query_basic(self):
@@ -99,7 +130,7 @@ class DeploymentTestCase(BaseCase):
                 },
             },
         ]
-        self.k8s_client.resources.get.return_value.get.return_value.to_dict.side_effect = lambda: {
+        self.dynamic_client.resources.get.return_value.get.return_value.to_dict.side_effect = lambda: {
             "metadata": {},
             "items": ["test"],
         }
@@ -107,20 +138,20 @@ class DeploymentTestCase(BaseCase):
             with self.subTest(case=case):
                 len(case["query"])
                 self.assertEqual(
-                    self.k8s_client.resources.method_calls,
+                    self.dynamic_client.resources.method_calls,
                     [mock.call.get(api_version="v1", kind="Deployment")],
                 )
                 self.assertEqual(
-                    self.k8s_client.resources.get.return_value.method_calls,
+                    self.dynamic_client.resources.get.return_value.method_calls,
                     [mock.call.get(**case["api_call"], _continue=None, limit=100)],
                 )
-                self.k8s_client.reset_mock()
+                self.dynamic_client.reset_mock()
 
         models.Deployment.objects.using(self.client).get(
             name="apple", namespace="orange"
         )
         self.assertEqual(
-            self.k8s_client.resources.get.return_value.method_calls,
+            self.dynamic_client.resources.get.return_value.method_calls,
             [
                 mock.call.get(
                     name="apple", namespace="orange", _continue=None, limit=100
@@ -158,7 +189,7 @@ class DeploymentTestCase(BaseCase):
                 },
             ],
         }
-        self.k8s_client.resources.get.return_value.get.return_value = mock_response
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
         query = models.Deployment.objects.using(self.client).filter(owner=mock_owner)
         self.assertEqual(len(query), 2)
 
@@ -231,9 +262,9 @@ class DeploymentTestCase(BaseCase):
         }
 
         # pod come first because owner filter is POST operator
-        self.k8s_client.resources.get.return_value.get.side_effect = [
-            mock_rs_response,
+        self.dynamic_client.resources.get.return_value.get.side_effect = [
             mock_pod_response,
+            mock_rs_response,
         ]
 
         self.assertEqual(len(deployment.pods.all()), 1)
@@ -270,7 +301,7 @@ class CustomModelTestCase(BaseCase):
                 {"id": 3, "job": {"task": "task3"}},
             ],
         }
-        self.k8s_client.resources.get.return_value.get.return_value = mock_response
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
         queryset = CustomModel.objects.using(self.client).filter(task="task3")
         self.assertEqual(len(queryset), 1)
         self.assertEqual(queryset[0].task, "task3")

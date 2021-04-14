@@ -21,8 +21,12 @@ class RelatedField:
 
 
 class QueryField:
+    operator_class = None
+
     def __init__(self, operator=None, path=None):
-        self.operator = operator(path=path) or operators.JsonPathOperator(path=path)
+        self.operator = operator(
+            path=path
+        ) if operator else self.operator_class(path=path)
         self.path = path
         self.field_name = None
 
@@ -37,11 +41,17 @@ class QueryField:
         self.operator.field_name = name
 
 
+class JsonPathField(QueryField):
+    operator_class = operators.JsonPathOperator
+
+
+class K8sApiField(QueryField):
+    operator_class = operators.ClientValueOperator
+
+
 class K8sModel:
-    name = QueryField(operator=operators.ClientValueOperator, path="metadata.name")
-    namespace = QueryField(
-        operator=operators.ClientValueOperator, path="metadata.namespace"
-    )
+    name = K8sApiField(path="metadata.name")
+    namespace = K8sApiField(path="metadata.namespace")
     selector = QueryField(operator=operators.SelectorOperator)
     owner = QueryField(operator=operators.OwnerRefOperator)
 

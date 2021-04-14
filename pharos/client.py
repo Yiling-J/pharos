@@ -21,7 +21,7 @@ class Client:
     k8s_client = None
 
     def __init__(self, path, **kwargs):
-        api_client = kubernetes.config.new_client_from_config(path)
-        self.k8s_client = kubernetes.dynamic.DynamicClient(api_client)
+        self.k8s_client = kubernetes.config.new_client_from_config(path)
+        self.dynamic_client = kubernetes.dynamic.DynamicClient(self.k8s_client)
         self.settings = Settings()
         self.settings.update(kwargs)

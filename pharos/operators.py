@@ -1,4 +1,5 @@
 from jsonpath_ng.ext import parse
+from pharos import exceptions
 
 
 class BaseOperator:
@@ -9,8 +10,21 @@ class BaseOperator:
         raise
 
 
-class SelectorOperator(BaseOperator):
-    type = "PRE"
+class PreOperator(BaseOperator):
+    type = 'PRE'
+
+    def update_queryset(self, qs, value, op):
+        raise NotImplementedError()
+
+
+class PostOperator(BaseOperator):
+    type = 'POST'
+
+    def validate(self, obj, data, op):
+        raise NotImplementedError
+
+
+class SelectorOperator(PreOperator):
 
     def get_value(self, obj):
         data = obj.k8s_object["spec"].get("selector")
@@ -30,8 +44,7 @@ class SelectorOperator(BaseOperator):
             qs.api_kwargs["label_selector"] = value
 
 
-class ClientValueOperator(BaseOperator):
-    type = "PRE"
+class ClientValueOperator(PreOperator):
 
     def get_value(self, obj):
         jsonpath_expr = parse(self.path)
@@ -48,41 +61,45 @@ def find_jsonpath_value(jsonpath_expr, data):
     return matches[0] if matches else None
 
 
-class JsonPathOperator(BaseOperator):
-    type = "POST"
+class JsonPathOperator(PostOperator):
+
+    def __init__(self, path):
+        super().__init__(path)
+        self.jsonpath_expr = parse(self.path)
 
     def get_value(self, obj):
         jsonpath_expr = parse(self.path)
         matches = jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
 
-    def update_queryset(self, qs, value, op):
-        jsonpath_expr = parse(self.path)
+    def validate(self, obj, data, op):
         if op == "EQUAL":
-            qs._result_cache = [
-                i for i in qs if find_jsonpath_value(jsonpath_expr, i) == value
-            ]
+            valid = find_jsonpath_value(self.jsonpath_expr, obj) == data
         elif op == "IN":
-            qs._result_cache = [
-                i for i in qs if find_jsonpath_value(jsonpath_expr, i) in value
-            ]
+            valid = find_jsonpath_value(self.jsonpath_expr, obj) in data
         else:
-            raise
+            raise exceptions.OperatorNotValid()
+        if not valid:
+            raise exceptions.ValidationError()
+        return obj
 
 
-class OwnerRefOperator(BaseOperator):
-    type = "POST"
+class OwnerRefOperator(PostOperator):
+
+    def __init__(self, path):
+        self.path = "$.metadata.ownerReferences[*].uid"
+        self.jsonpath_expr = parse(self.path)
 
     def get_value(self, obj):
         return obj["metadata"].get("ownerReferences")
 
-    def update_queryset(self, qs, data, op):
+    def validate(self, obj, data, op):
         if op == "IN":
             values = {owner.k8s_object["metadata"]["uid"] for owner in data}
         else:
             values = {data.k8s_object["metadata"]["uid"]}
 
-        jsonpath_expr = parse(f"$.metadata.ownerReferences[*].uid")
-        qs._result_cache = [
-            i for i in qs if {m.value for m in jsonpath_expr.find(i)} & set(values)
-        ]
+        valid = bool({i.value for i in self.jsonpath_expr.find(obj)} & set(values))
+        if not valid:
+            raise exceptions.ValidationError()
+        return obj

@@ -12,3 +12,11 @@ class ObjectDoesNotExist(Exception):
 
 class MultipleObjectsReturned(Exception):
     pass
+
+
+class ValidationError(Exception):
+    pass
+
+
+class OperatorNotValid(Exception):
+    pass
