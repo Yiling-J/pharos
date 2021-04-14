@@ -3,8 +3,12 @@ from pharos import exceptions
 
 
 class BaseOperator:
+    json_path = True
+
     def __init__(self, path):
         self.path = path
+        if self.path and self.json_path:
+            self.jsonpath_expr = parse(self.path)
 
     def get_value(self, obj):
         raise
@@ -47,8 +51,7 @@ class SelectorOperator(PreOperator):
 class ClientValueOperator(PreOperator):
 
     def get_value(self, obj):
-        jsonpath_expr = parse(self.path)
-        matches = jsonpath_expr.find(obj.k8s_object)
+        matches = self.jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
 
     def update_queryset(self, qs, value, op):
@@ -63,13 +66,8 @@ def find_jsonpath_value(jsonpath_expr, data):
 
 class JsonPathOperator(PostOperator):
 
-    def __init__(self, path):
-        super().__init__(path)
-        self.jsonpath_expr = parse(self.path)
-
     def get_value(self, obj):
-        jsonpath_expr = parse(self.path)
-        matches = jsonpath_expr.find(obj.k8s_object)
+        matches = self.jsonpath_expr.find(obj.k8s_object)
         return matches[0].value if matches else None
 
     def validate(self, obj, data, op):

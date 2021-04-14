@@ -62,6 +62,12 @@ class K8sModel:
         self.k8s_object = k8s_object
         self._client = client
 
+    def __repr__(self):
+        return f'<{self.Meta.kind}: {self.name}>'
+
+    def __str__(self):
+        return self.name or ''
+
 
 class ReplicaSet(K8sModel):
     class Meta:
