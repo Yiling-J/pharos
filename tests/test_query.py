@@ -50,6 +50,37 @@ class DeploymentTestCase(BaseCase):
             self.dynamic_client.resources.get.return_value.method_calls, expected_call
         )
 
+    def test_limit_with_iterator(self):
+        mock_response = mock.Mock()
+        response_lambda = lambda token: {
+            "metadata": {"continue": token},
+            "items": [
+                {
+                    "id": token,
+                    "metadata": {
+                        "ownerReferences": [{"kind": "Apple", "uid": "123"}],
+                        "name": "test",
+                    },
+                }
+            ],
+        }
+
+        # should call 3 times only
+        mock_response.to_dict.side_effect = [
+            response_lambda(f"{i}") for i in [1, 2, 3, 4, 5, "END", 7]
+        ]
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        query = models.Deployment.objects.using(self.client).limit(3)
+        self.assertEqual(len(query), 3)
+        expected_call = [
+            mock.call.get(_continue=None, limit=100),
+            mock.call.get(_continue="1", limit=100),
+            mock.call.get(_continue="2", limit=100)
+        ]
+        self.assertEqual(
+            self.dynamic_client.resources.get.return_value.method_calls, expected_call
+        )
+
     def test_deployment_query_basic(self):
         test_cases = [
             {

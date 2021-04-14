@@ -88,8 +88,6 @@ class QuerySet:
         post_operators = [i for i in self._query if i["operator"].type == "POST"]
         for obj in result:
             valid = True
-            if len(final) == self._limit:
-                break
             for i in post_operators:
                 try:
                     obj = i["operator"].validate(obj, i["value"], i["op"])
@@ -98,6 +96,8 @@ class QuerySet:
                     break
             if valid is True:
                 final.append(obj)
+            if len(final) == self._limit:
+                break
 
         self._result_cache = [
             self.model(client=self._client, k8s_object=i) for i in final
