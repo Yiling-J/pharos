@@ -117,11 +117,6 @@ class QuerySet:
                 "QuerySet indices must be integers or slices, not %s."
                 % type(k).__name__
             )
-        assert (not isinstance(k, slice) and (k >= 0)) or (
-            isinstance(k, slice)
-            and (k.start is None or k.start >= 0)
-            and (k.stop is None or k.stop >= 0)
-        ), "Negative indexing is not supported."
 
         self._fetch_all()
         return self._result_cache[k]
