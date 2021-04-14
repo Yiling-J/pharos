@@ -28,7 +28,7 @@ client = Client('YOUR_PATH/.kube/config', disable_compress=True, chunk_size=500)
 client.settings.chunk_size
 
 ```
-basic query syntax, follow django ORM style
+basic query syntax, follow Django ORM style
 
 ```python
 from pharos.models import Deployment
