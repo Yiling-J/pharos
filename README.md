@@ -1,5 +1,7 @@
 # Pharos(WIP)
 
+![Workflow](https://github.com/Yiling-J/pharos/actions/workflows/main.yaml/badge.svg)
+
 Managing Kubernetes resources in Python.
 
 
@@ -26,7 +28,7 @@ client = Client('YOUR_PATH/.kube/config', disable_compress=True, chunk_size=500)
 client.settings.chunk_size
 
 ```
-basic query syntax
+basic query syntax, follow django ORM style
 
 ```python
 from pharos.models import Deployment
@@ -46,6 +48,9 @@ Deployment.objects.using(client).filter(selector='app=test').filter(selector='ve
 
 # limit results
 pods = Pod.objects.all().limit(100)
+
+# refresh query
+pods_refreshed = pods.all()
 
 ```
 
