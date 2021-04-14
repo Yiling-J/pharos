@@ -1,5 +1,7 @@
 # Pharos(WIP)
 
+![Workflow](https://github.com/Yiling-J/pharos/actions/workflows/main.yaml/badge.svg)
+
 Managing Kubernetes resources in Python.
 
 
