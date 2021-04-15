@@ -311,3 +311,35 @@ class CustomModelTestCase(BaseCase):
         self.assertEqual(len(queryset), 2)
         self.assertEqual(queryset[0].task, "task1")
         self.assertEqual(queryset[1].task, "task3")
+
+    def test_contains(self):
+        mock_response = mock.Mock()
+        mock_response.to_dict.side_effect = lambda: {
+            "metadata": {},
+            "items": [
+                {"id": 1, "job": {"task": "foo"}},
+                {"id": 2, "job": {"task": "bar"}},
+                {"id": 3, "job": {"task": "barfoobar"}},
+            ],
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        queryset = CustomModel.objects.using(self.client).filter(
+            task__contains='foo'
+        )
+        self.assertEqual(len(queryset), 2)
+
+    def test_startswith(self):
+        mock_response = mock.Mock()
+        mock_response.to_dict.side_effect = lambda: {
+            "metadata": {},
+            "items": [
+                {"id": 1, "job": {"task": "foofoo"}},
+                {"id": 2, "job": {"task": "fobar"}},
+                {"id": 3, "job": {"task": "barfoobar"}},
+            ],
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        queryset = CustomModel.objects.using(self.client).filter(
+            task__startswith='foo'
+        )
+        self.assertEqual(len(queryset), 1)

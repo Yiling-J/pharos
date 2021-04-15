@@ -70,7 +70,7 @@ class QuerySet:
         if self._client.settings.disable_compress is False:
             self.api_kwargs["header_params"] = {"Accept-Encoding": "gzip"}
 
-        for item in [i for i in self._query if i["operator"].type == "PRE"]:
+        for item in [i for i in self._query if i["operator"].get_type(i['op']) == "PRE"]:
             item["operator"].update_queryset(self, item["value"], item["op"])
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
@@ -85,7 +85,7 @@ class QuerySet:
         self._result_cache = result
 
         final = []
-        post_operators = [i for i in self._query if i["operator"].type == "POST"]
+        post_operators = [i for i in self._query if i["operator"].get_type(i['op']) == "POST"]
         for obj in result:
             valid = True
             for i in post_operators:

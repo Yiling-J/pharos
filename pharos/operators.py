@@ -4,6 +4,7 @@ from pharos import exceptions
 
 class BaseOperator:
     json_path = True
+    type = None
 
     def __init__(self, path):
         self.path = path
@@ -12,6 +13,14 @@ class BaseOperator:
 
     def get_value(self, obj):
         raise
+
+    def get_type(self, op):
+        if self.type:
+            return self.type
+        return self._get_type_from_op(op)
+
+    def _get_type_from_op(self, op):
+        raise NotImplementedError()
 
 
 class PreOperator(BaseOperator):
@@ -48,7 +57,12 @@ class SelectorOperator(PreOperator):
             qs.api_kwargs["label_selector"] = value
 
 
-class ClientValueOperator(PreOperator):
+class ClientValueOperator(BaseOperator):
+
+    def _get_type_from_op(self, op):
+        if op == 'EQUAL':
+            return 'PRE'
+        return 'POST'
 
     def get_value(self, obj):
         matches = self.jsonpath_expr.find(obj.k8s_object)
@@ -57,6 +71,19 @@ class ClientValueOperator(PreOperator):
     def update_queryset(self, qs, value, op):
         qs.api_kwargs[self.field_name] = value
         return qs
+
+    def validate(self, obj, data, op):
+        if op == "IN":
+            valid = find_jsonpath_value(self.jsonpath_expr, obj) in data
+        elif op == 'CONTAINS':
+            valid = data in find_jsonpath_value(self.jsonpath_expr, obj)
+        elif op == 'STARTSWITH':
+            valid = find_jsonpath_value(self.jsonpath_expr, obj).startswith(data)
+        else:
+            raise exceptions.OperatorNotValid()
+        if not valid:
+            raise exceptions.ValidationError()
+        return obj
 
 
 def find_jsonpath_value(jsonpath_expr, data):
@@ -75,6 +102,10 @@ class JsonPathOperator(PostOperator):
             valid = find_jsonpath_value(self.jsonpath_expr, obj) == data
         elif op == "IN":
             valid = find_jsonpath_value(self.jsonpath_expr, obj) in data
+        elif op == 'CONTAINS':
+            valid = data in find_jsonpath_value(self.jsonpath_expr, obj)
+        elif op == 'STARTSWITH':
+            valid = find_jsonpath_value(self.jsonpath_expr, obj).startswith(data)
         else:
             raise exceptions.OperatorNotValid()
         if not valid:
