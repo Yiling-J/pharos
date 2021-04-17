@@ -34,7 +34,7 @@ class QueryField:
         if not obj:
             return self
 
-        return self.operator.get_value(obj)
+        return self.operator.get_value(obj.k8s_object)
 
     def __set_name__(self, owner, name):
         self.field_name = name

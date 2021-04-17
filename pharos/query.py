@@ -24,11 +24,10 @@ class QuerySet:
     def filter(self, **kwargs):
         clone = self._clone()
         for k, v in kwargs.items():
-            op = "EQUAL"
+            op = "equal"
             field = k
             if "__" in k:
                 field, op = k.rsplit("__", 1)
-                op = op.upper()
             field = getattr(clone.model, field, None)
             if not field:
                 raise exceptions.FieldDoesNotExist()
@@ -70,8 +69,22 @@ class QuerySet:
         if self._client.settings.disable_compress is False:
             self.api_kwargs["header_params"] = {"Accept-Encoding": "gzip"}
 
-        for item in [i for i in self._query if i["operator"].get_type(i['op']) == "PRE"]:
-            item["operator"].update_queryset(self, item["value"], item["op"])
+        pre_lookups = []
+        post_lookups = []
+        for i in self._query:
+            lookup = i["operator"].get_lookup(i['op'])
+            if lookup.type == lookup.PRE:
+                pre_lookups.append(
+                    {'operator': i['operator'], 'lookup': lookup, 'rhs': i['value']}
+                )
+            elif lookup.type == lookup.POST:
+                post_lookups.append(
+                    {'operator': i['operator'], 'lookup': lookup, 'rhs': i['value']}
+                )
+
+        for lookup in pre_lookups:
+            lookup['lookup'].update_queryset(self, lookup["rhs"])
+
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
@@ -85,15 +98,16 @@ class QuerySet:
         self._result_cache = result
 
         final = []
-        post_operators = [i for i in self._query if i["operator"].get_type(i['op']) == "POST"]
         for obj in result:
             valid = True
-            for i in post_operators:
+            for lookup in post_lookups:
                 try:
-                    obj = i["operator"].validate(obj, i["value"], i["op"])
+                    value = lookup['operator'].get_value(obj)
+                    lookup['lookup'].validate(value, lookup["rhs"])
                 except exceptions.ValidationError:
                     valid = False
                     break
+
             if valid is True:
                 final.append(obj)
             if len(final) == self._limit:
