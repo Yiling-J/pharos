@@ -4,8 +4,8 @@ from pharos import exceptions
 
 class Lookup:
 
-    PRE = 'PRE'
-    POST = 'POST'
+    PRE = "PRE"
+    POST = "POST"
     name = None
     type = None
 
@@ -21,7 +21,7 @@ class Lookup:
 
 
 class ApiEqualLookup(Lookup):
-    name = 'equal'
+    name = "equal"
     type = Lookup.PRE
 
     def update_queryset(self, qs, value):
@@ -30,7 +30,6 @@ class ApiEqualLookup(Lookup):
 
 
 class LabelSelectorLookup(ApiEqualLookup):
-
     def update_queryset(self, qs, value):
         if "label_selector" in qs.api_kwargs:
             qs.api_kwargs["label_selector"] += f",{value}"
@@ -39,7 +38,7 @@ class LabelSelectorLookup(ApiEqualLookup):
 
 
 class JsonPathEqualLookup(Lookup):
-    name = 'equal'
+    name = "equal"
     type = Lookup.POST
 
     def validate(self, obj, data):
@@ -50,12 +49,12 @@ class JsonPathEqualLookup(Lookup):
 
 
 class ApiInLookup(Lookup):
-    name = 'in'
+    name = "in"
     type = Lookup.PRE
 
 
 class JsonPathInLookup(Lookup):
-    name = 'in'
+    name = "in"
     type = Lookup.POST
 
     def validate(self, obj, data):
@@ -66,7 +65,7 @@ class JsonPathInLookup(Lookup):
 
 
 class JsonPathContainsLookup(Lookup):
-    name = 'contains'
+    name = "contains"
     type = Lookup.POST
 
     def validate(self, obj, data):
@@ -77,7 +76,7 @@ class JsonPathContainsLookup(Lookup):
 
 
 class JsonPathStartsWithLookup(Lookup):
-    name = 'startswith'
+    name = "startswith"
     type = Lookup.POST
 
     def validate(self, obj, data):
@@ -88,24 +87,24 @@ class JsonPathStartsWithLookup(Lookup):
 
 
 class OwnerRefEqualLookup(Lookup):
-    name = 'equal'
+    name = "equal"
     type = Lookup.POST
 
     def validate(self, obj, data):
         values = {data.k8s_object["metadata"]["uid"]}
-        valid = bool({i.get('uid') for i in obj} & set(values))
+        valid = bool({i.get("uid") for i in obj} & set(values))
         if valid:
             return data
         raise exceptions.ValidationError()
 
 
 class OwnerRefInLookup(Lookup):
-    name = 'in'
+    name = "in"
     type = Lookup.POST
 
     def validate(self, obj, data):
         values = {owner.k8s_object["metadata"]["uid"] for owner in data}
-        valid = bool({i.get('uid', None) for i in obj} & set(values))
+        valid = bool({i.get("uid", None) for i in obj} & set(values))
         if valid:
             return data
         raise exceptions.ValidationError()
@@ -164,7 +163,10 @@ class QueryField:
 
 class JsonPathField(QueryField):
     lookups = [
-        JsonPathEqualLookup, JsonPathInLookup, JsonPathContainsLookup, JsonPathStartsWithLookup
+        JsonPathEqualLookup,
+        JsonPathInLookup,
+        JsonPathContainsLookup,
+        JsonPathStartsWithLookup,
     ]
 
     def get_value(self, obj):
@@ -173,7 +175,10 @@ class JsonPathField(QueryField):
 
 class K8sApiField(QueryField):
     lookups = [
-        ApiEqualLookup, JsonPathInLookup, JsonPathContainsLookup, JsonPathStartsWithLookup
+        ApiEqualLookup,
+        JsonPathInLookup,
+        JsonPathContainsLookup,
+        JsonPathStartsWithLookup,
     ]
 
     def get_value(self, obj):
@@ -181,7 +186,7 @@ class K8sApiField(QueryField):
 
 
 class OwnerRefField(QueryField):
-    path = '$.metadata.ownerReferences[*].uid'
+    path = "$.metadata.ownerReferences[*].uid"
     lookups = [OwnerRefEqualLookup, OwnerRefInLookup]
 
     def get_value(self, obj):

@@ -72,18 +72,18 @@ class QuerySet:
         pre_lookups = []
         post_lookups = []
         for i in self._query:
-            lookup = i["field"].get_lookup(i['op'])
+            lookup = i["field"].get_lookup(i["op"])
             if lookup.type == lookup.PRE:
                 pre_lookups.append(
-                    {'field': i['field'], 'lookup': lookup, 'rhs': i['value']}
+                    {"field": i["field"], "lookup": lookup, "rhs": i["value"]}
                 )
             elif lookup.type == lookup.POST:
                 post_lookups.append(
-                    {'field': i['field'], 'lookup': lookup, 'rhs': i['value']}
+                    {"field": i["field"], "lookup": lookup, "rhs": i["value"]}
                 )
 
         for lookup in pre_lookups:
-            lookup['lookup'].update_queryset(self, lookup["rhs"])
+            lookup["lookup"].update_queryset(self, lookup["rhs"])
 
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
@@ -102,8 +102,8 @@ class QuerySet:
             valid = True
             for lookup in post_lookups:
                 try:
-                    value = lookup['field'].get_value(obj)
-                    lookup['lookup'].validate(value, lookup["rhs"])
+                    value = lookup["field"].get_value(obj)
+                    lookup["lookup"].validate(value, lookup["rhs"])
                 except exceptions.ValidationError:
                     valid = False
                     break

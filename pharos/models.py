@@ -16,10 +16,10 @@ class K8sModel:
         self._client = client
 
     def __repr__(self):
-        return f'<{self.Meta.kind}: {self.name}>'
+        return f"<{self.Meta.kind}: {self.name}>"
 
     def __str__(self):
-        return self.name or ''
+        return self.name or ""
 
 
 class ReplicaSet(K8sModel):
