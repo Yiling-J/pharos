@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from pharos import models, operators, exceptions
+from pharos import models, fields, exceptions
 
 
 class BaseCase(TestCase):
@@ -75,7 +75,7 @@ class DeploymentTestCase(BaseCase):
         expected_call = [
             mock.call.get(_continue=None, limit=100),
             mock.call.get(_continue="1", limit=100),
-            mock.call.get(_continue="2", limit=100)
+            mock.call.get(_continue="2", limit=100),
         ]
         self.assertEqual(
             self.dynamic_client.resources.get.return_value.method_calls, expected_call
@@ -271,7 +271,7 @@ class DeploymentTestCase(BaseCase):
 
 
 class CustomModel(models.K8sModel):
-    task = models.QueryField(operator=operators.JsonPathOperator, path="job.task")
+    task = fields.JsonPathField(path="job.task")
 
     class Meta:
         api_version = "v1"
@@ -323,9 +323,7 @@ class CustomModelTestCase(BaseCase):
             ],
         }
         self.dynamic_client.resources.get.return_value.get.return_value = mock_response
-        queryset = CustomModel.objects.using(self.client).filter(
-            task__contains='foo'
-        )
+        queryset = CustomModel.objects.using(self.client).filter(task__contains="foo")
         self.assertEqual(len(queryset), 2)
 
     def test_startswith(self):
@@ -339,7 +337,5 @@ class CustomModelTestCase(BaseCase):
             ],
         }
         self.dynamic_client.resources.get.return_value.get.return_value = mock_response
-        queryset = CustomModel.objects.using(self.client).filter(
-            task__startswith='foo'
-        )
+        queryset = CustomModel.objects.using(self.client).filter(task__startswith="foo")
         self.assertEqual(len(queryset), 1)
