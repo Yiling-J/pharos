@@ -93,7 +93,7 @@ class OwnerRefField(QueryField):
         return obj["metadata"].get("ownerReferences")
 
 
-class LabelField(QueryField):
+class LabelSelectorField(QueryField):
     lookups = [lookups.LabelSelectorLookup]
 
     def get_value(self, obj):
@@ -106,6 +106,10 @@ class LabelField(QueryField):
             ]
             return ",".join(labels + expressions)
         return None
+
+
+class FieldSelectorField(QueryField):
+    lookups = [lookups.FieldSelectorLookup]
 
 
 def find_jsonpath_value(jsonpath_expr, data):

@@ -129,6 +129,22 @@ class DeploymentTestCase(BaseCase):
                     "label_selector": "app in (a),app=b",
                 },
             },
+            {
+                "query": models.Deployment.objects.using(self.client).filter(
+                    field_selector="name=foo"
+                ),
+                "api_call": {
+                    "field_selector": "name=foo",
+                },
+            },
+            {
+                "query": models.Deployment.objects.using(self.client)
+                .filter(field_selector="name=foo")
+                .filter(field_selector="type=bar"),
+                "api_call": {
+                    "field_selector": "name=foo,type=bar",
+                },
+            },
         ]
         self.dynamic_client.resources.get.return_value.get.return_value.to_dict.side_effect = lambda: {
             "metadata": {},

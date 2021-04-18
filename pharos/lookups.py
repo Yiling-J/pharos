@@ -36,6 +36,14 @@ class LabelSelectorLookup(ApiEqualLookup):
             qs.api_kwargs["label_selector"] = value
 
 
+class FieldSelectorLookup(ApiEqualLookup):
+    def update_queryset(self, qs, value):
+        if "field_selector" in qs.api_kwargs:
+            qs.api_kwargs["field_selector"] += f",{value}"
+        else:
+            qs.api_kwargs["field_selector"] = value
+
+
 class JsonPathEqualLookup(Lookup):
     name = "equal"
     type = Lookup.POST

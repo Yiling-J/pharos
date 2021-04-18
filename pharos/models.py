@@ -5,7 +5,8 @@ from pharos import fields
 class K8sModel:
     name = fields.K8sApiField(path="metadata.name")
     namespace = fields.K8sApiField(path="metadata.namespace")
-    selector = fields.LabelField()
+    selector = fields.LabelSelectorField()
+    field_selector = fields.FieldSelectorField()
     owner = fields.OwnerRefField()
 
     objects = managers.Manager()
