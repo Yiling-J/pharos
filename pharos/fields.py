@@ -1,113 +1,5 @@
 from jsonpath_ng.ext import parse
-from pharos import exceptions
-
-
-class Lookup:
-
-    PRE = "PRE"
-    POST = "POST"
-    name = None
-    type = None
-
-    def __init__(self, jsonpath_expr, field):
-        self.field = field
-        self.jsonpath_expr = jsonpath_expr
-
-    def update_queryset(self, qs, value, op):
-        raise NotImplementedError()
-
-    def validate(self, obj, data):
-        raise NotImplementedError
-
-
-class ApiEqualLookup(Lookup):
-    name = "equal"
-    type = Lookup.PRE
-
-    def update_queryset(self, qs, value):
-        qs.api_kwargs[self.field.field_name] = value
-        return qs
-
-
-class LabelSelectorLookup(ApiEqualLookup):
-    def update_queryset(self, qs, value):
-        if "label_selector" in qs.api_kwargs:
-            qs.api_kwargs["label_selector"] += f",{value}"
-        else:
-            qs.api_kwargs["label_selector"] = value
-
-
-class JsonPathEqualLookup(Lookup):
-    name = "equal"
-    type = Lookup.POST
-
-    def validate(self, obj, data):
-        valid = obj == data
-        if valid:
-            return data
-        raise exceptions.ValidationError()
-
-
-class ApiInLookup(Lookup):
-    name = "in"
-    type = Lookup.PRE
-
-
-class JsonPathInLookup(Lookup):
-    name = "in"
-    type = Lookup.POST
-
-    def validate(self, obj, data):
-        valid = obj in data
-        if valid:
-            return data
-        raise exceptions.ValidationError()
-
-
-class JsonPathContainsLookup(Lookup):
-    name = "contains"
-    type = Lookup.POST
-
-    def validate(self, obj, data):
-        valid = data in obj
-        if valid:
-            return data
-        raise exceptions.ValidationError()
-
-
-class JsonPathStartsWithLookup(Lookup):
-    name = "startswith"
-    type = Lookup.POST
-
-    def validate(self, obj, data):
-        valid = obj.startswith(data)
-        if valid:
-            return data
-        raise exceptions.ValidationError()
-
-
-class OwnerRefEqualLookup(Lookup):
-    name = "equal"
-    type = Lookup.POST
-
-    def validate(self, obj, data):
-        values = {data.k8s_object["metadata"]["uid"]}
-        valid = bool({i.get("uid") for i in obj} & set(values))
-        if valid:
-            return data
-        raise exceptions.ValidationError()
-
-
-class OwnerRefInLookup(Lookup):
-    name = "in"
-    type = Lookup.POST
-
-    def validate(self, obj, data):
-        values = {owner.k8s_object["metadata"]["uid"] for owner in data}
-        valid = bool({i.get("uid", None) for i in obj} & set(values))
-        if valid:
-            return data
-        raise exceptions.ValidationError()
+from pharos import lookups
 
 
 class RelatedField:
@@ -131,7 +23,6 @@ class RelatedField:
 class QueryField:
     operator_class = None
     path = None
-    json_path = True
 
     def __init__(self, path=None):
         self.path = path or self.path
@@ -139,7 +30,7 @@ class QueryField:
         self.valid_lookups = {}
 
         self.jsonpath_expr = None
-        if self.path and self.json_path:
+        if self.path:
             self.jsonpath_expr = parse(self.path)
 
         for lookup in self.lookups:
@@ -163,10 +54,10 @@ class QueryField:
 
 class JsonPathField(QueryField):
     lookups = [
-        JsonPathEqualLookup,
-        JsonPathInLookup,
-        JsonPathContainsLookup,
-        JsonPathStartsWithLookup,
+        lookups.JsonPathEqualLookup,
+        lookups.JsonPathInLookup,
+        lookups.JsonPathContainsLookup,
+        lookups.JsonPathStartsWithLookup,
     ]
 
     def get_value(self, obj):
@@ -175,10 +66,10 @@ class JsonPathField(QueryField):
 
 class K8sApiField(QueryField):
     lookups = [
-        ApiEqualLookup,
-        JsonPathInLookup,
-        JsonPathContainsLookup,
-        JsonPathStartsWithLookup,
+        lookups.ApiEqualLookup,
+        lookups.JsonPathInLookup,
+        lookups.JsonPathContainsLookup,
+        lookups.JsonPathStartsWithLookup,
     ]
 
     def get_value(self, obj):
@@ -187,14 +78,16 @@ class K8sApiField(QueryField):
 
 class OwnerRefField(QueryField):
     path = "$.metadata.ownerReferences[*].uid"
-    lookups = [OwnerRefEqualLookup, OwnerRefInLookup]
+    lookups = [
+        lookups.OwnerRefEqualLookup, lookups.OwnerRefInLookup
+    ]
 
     def get_value(self, obj):
         return obj["metadata"].get("ownerReferences")
 
 
 class LabelField(QueryField):
-    lookups = [LabelSelectorLookup]
+    lookups = [lookups.LabelSelectorLookup]
 
     def get_value(self, obj):
         data = obj["spec"].get("selector")
