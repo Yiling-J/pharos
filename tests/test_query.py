@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from pharos import models, fields, exceptions
+from pharos import models, fields, exceptions, lookups
 
 
 class BaseCase(TestCase):
@@ -270,6 +270,17 @@ class DeploymentTestCase(BaseCase):
         self.assertEqual(len(deployment.pods.all()), 1)
 
 
+class CustomLookup(lookups.Lookup):
+    name = "foo"
+    type = lookups.Lookup.POST
+
+    def validate(self, obj, data):
+        return True
+
+
+fields.JsonPathField.add_lookup(CustomLookup)
+
+
 class CustomModel(models.K8sModel):
     task = fields.JsonPathField(path="job.task")
 
@@ -312,6 +323,16 @@ class CustomModelTestCase(BaseCase):
         self.assertEqual(queryset[0].task, "task1")
         self.assertEqual(queryset[1].task, "task3")
 
+    def test_custom_lookup(self):
+        mock_response = mock.Mock()
+        mock_response.to_dict.side_effect = lambda: {
+            "metadata": {},
+            "items": [{"id": 1, "job": {"task": "task1"}}],
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        queryset = CustomModel.objects.using(self.client).filter(task__foo="task3")
+        self.assertEqual(len(queryset), 1)
+
     def test_contains(self):
         mock_response = mock.Mock()
         mock_response.to_dict.side_effect = lambda: {
@@ -337,7 +358,9 @@ class CustomModelTestCase(BaseCase):
             ],
         }
         self.dynamic_client.resources.get.return_value.get.return_value = mock_response
-        queryset = CustomModel.objects.using(self.client).filter(task__contains=["foo", "new"])
+        queryset = CustomModel.objects.using(self.client).filter(
+            task__contains=["foo", "new"]
+        )
         self.assertEqual(len(queryset), 1)
         self.assertEqual(queryset[0].task, ["foo", "bar", "new"])
 

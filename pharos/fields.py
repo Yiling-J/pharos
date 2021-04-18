@@ -1,5 +1,6 @@
 from jsonpath_ng.ext import parse
 from pharos import lookups
+from pharos import exceptions
 
 
 class RelatedField:
@@ -23,6 +24,7 @@ class RelatedField:
 class QueryField:
     operator_class = None
     path = None
+    lookups = []
 
     def __init__(self, path=None):
         self.path = path or self.path
@@ -51,6 +53,13 @@ class QueryField:
     def get_lookup(self, op):
         return self.valid_lookups[op]
 
+    @classmethod
+    def add_lookup(cls, lookup):
+        if issubclass(lookup, lookups.Lookup):
+            cls.lookups.append(lookup)
+            return
+        raise exceptions.LookupNotValid()
+
 
 class JsonPathField(QueryField):
     lookups = [
@@ -78,9 +87,7 @@ class K8sApiField(QueryField):
 
 class OwnerRefField(QueryField):
     path = "$.metadata.ownerReferences[*].uid"
-    lookups = [
-        lookups.OwnerRefEqualLookup, lookups.OwnerRefInLookup
-    ]
+    lookups = [lookups.OwnerRefEqualLookup, lookups.OwnerRefInLookup]
 
     def get_value(self, obj):
         return obj["metadata"].get("ownerReferences")

@@ -20,3 +20,7 @@ class ValidationError(Exception):
 
 class OperatorNotValid(Exception):
     pass
+
+
+class LookupNotValid(Exception):
+    pass
