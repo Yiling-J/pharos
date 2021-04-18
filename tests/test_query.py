@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from pharos import models, operators, exceptions
+from pharos import models, fields, exceptions
 
 
 class BaseCase(TestCase):
@@ -271,7 +271,7 @@ class DeploymentTestCase(BaseCase):
 
 
 class CustomModel(models.K8sModel):
-    task = models.QueryField(operator=operators.JsonPathOperator, path="job.task")
+    task = fields.JsonPathField(path="job.task")
 
     class Meta:
         api_version = "v1"

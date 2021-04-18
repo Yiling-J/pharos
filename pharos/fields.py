@@ -9,8 +9,8 @@ class Lookup:
     name = None
     type = None
 
-    def __init__(self, jsonpath_expr, operator):
-        self.operator = operator
+    def __init__(self, jsonpath_expr, field):
+        self.field = field
         self.jsonpath_expr = jsonpath_expr
 
     def update_queryset(self, qs, value, op):
@@ -25,7 +25,7 @@ class ApiEqualLookup(Lookup):
     type = Lookup.PRE
 
     def update_queryset(self, qs, value):
-        qs.api_kwargs[self.operator.field_name] = value
+        qs.api_kwargs[self.field.field_name] = value
         return qs
 
 
@@ -111,13 +111,32 @@ class OwnerRefInLookup(Lookup):
         raise exceptions.ValidationError()
 
 
-class BaseOperator:
-    json_path = True
-    lookups = []
-    path = None
+class RelatedField:
+    def __init__(self, to, through=None):
+        self.to = to
+        if through:
+            self.through = through
 
-    def __init__(self, path):
+    def __get__(self, obj, type=None):
+        manager = self.to.objects
+        clone = manager.__class__()
+        clone.model = manager.model
+        clone.owner = obj
+        clone._client = obj._client
+
+        if self.through:
+            clone.through = self.through
+        return clone
+
+
+class QueryField:
+    operator_class = None
+    path = None
+    json_path = True
+
+    def __init__(self, path=None):
         self.path = path or self.path
+        self.field_name = None
         self.valid_lookups = {}
 
         self.jsonpath_expr = None
@@ -125,16 +144,51 @@ class BaseOperator:
             self.jsonpath_expr = parse(self.path)
 
         for lookup in self.lookups:
-            self.valid_lookups[lookup.name] = lookup(self.jsonpath_expr, operator=self)
+            self.valid_lookups[lookup.name] = lookup(self.jsonpath_expr, field=self)
+
+    def __get__(self, obj, type=None):
+        if not obj:
+            return self
+
+        return self.get_value(obj.k8s_object)
+
+    def __set_name__(self, owner, name):
+        self.field_name = name
 
     def get_value(self, obj):
-        raise
+        raise NotImplementedError()
 
     def get_lookup(self, op):
         return self.valid_lookups[op]
 
 
-class SelectorOperator(BaseOperator):
+class JsonPathField(QueryField):
+    lookups = [
+        JsonPathEqualLookup, JsonPathInLookup, JsonPathContainsLookup, JsonPathStartsWithLookup
+    ]
+
+    def get_value(self, obj):
+        return find_jsonpath_value(self.jsonpath_expr, obj)
+
+
+class K8sApiField(QueryField):
+    lookups = [
+        ApiEqualLookup, JsonPathInLookup, JsonPathContainsLookup, JsonPathStartsWithLookup
+    ]
+
+    def get_value(self, obj):
+        return find_jsonpath_value(self.jsonpath_expr, obj)
+
+
+class OwnerRefField(QueryField):
+    path = '$.metadata.ownerReferences[*].uid'
+    lookups = [OwnerRefEqualLookup, OwnerRefInLookup]
+
+    def get_value(self, obj):
+        return obj["metadata"].get("ownerReferences")
+
+
+class LabelField(QueryField):
     lookups = [LabelSelectorLookup]
 
     def get_value(self, obj):
@@ -149,30 +203,6 @@ class SelectorOperator(BaseOperator):
         return None
 
 
-class ClientValueOperator(BaseOperator):
-    lookups = [ApiEqualLookup, JsonPathInLookup, JsonPathContainsLookup, JsonPathStartsWithLookup]
-
-    def get_value(self, obj):
-        return find_jsonpath_value(self.jsonpath_expr, obj)
-
-
 def find_jsonpath_value(jsonpath_expr, data):
     matches = [i.value for i in jsonpath_expr.find(data)]
     return matches[0] if matches else None
-
-
-class JsonPathOperator(BaseOperator):
-    lookups = [
-        JsonPathEqualLookup, JsonPathInLookup, JsonPathContainsLookup, JsonPathStartsWithLookup
-    ]
-
-    def get_value(self, obj):
-        return find_jsonpath_value(self.jsonpath_expr, obj)
-
-
-class OwnerRefOperator(BaseOperator):
-    path = '$.metadata.ownerReferences[*].uid'
-    lookups = [OwnerRefEqualLookup, OwnerRefInLookup]
-
-    def get_value(self, obj):
-        return obj["metadata"].get("ownerReferences")
