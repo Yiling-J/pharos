@@ -68,7 +68,10 @@ class JsonPathContainsLookup(Lookup):
     type = Lookup.POST
 
     def validate(self, obj, data):
-        valid = data in obj
+        if type(obj) == list and type(data) in (list, tuple, set):
+            valid = set(data) <= set(obj)
+        else:
+            valid = data in obj
         if valid:
             return data
         raise exceptions.ValidationError()
