@@ -23,24 +23,18 @@ class K8sModel:
         return self.name or ""
 
 
-class ReplicaSet(K8sModel):
-    class Meta:
-        api_version = "v1"
-        kind = "ReplicaSet"
-
-
 class Pod(K8sModel):
     class Meta:
         api_version = "v1"
         kind = "Pod"
 
 
-class Container(K8sModel):
-    pod = fields.RelatedField(Pod)
+class ReplicaSet(K8sModel):
+    pods = fields.RelatedField(to=Pod)
 
     class Meta:
         api_version = "v1"
-        kind = "Container"
+        kind = "ReplicaSet"
 
 
 class Deployment(K8sModel):
