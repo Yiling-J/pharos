@@ -80,11 +80,11 @@ class DaemonSet(K8sModel):
         kind = "DaemonSet"
 
 
-class Endpoint(K8sModel):
+class Endpoints(K8sModel):
 
     class Meta:
         api_version = "v1"
-        kind = "Endpoint"
+        kind = "Endpoints"
 
 
 class Event(K8sModel):
