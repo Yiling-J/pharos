@@ -72,10 +72,13 @@ class BaseManager:
                 .filter(selector=selector)
             )
 
+        filterset = {'selector': selector}
+        if not self.skip_owner:
+            filterset['owner'] = self.owner
         return self._queryset_class(
             model=self.model,
             using=self._client,
-        ).filter(label=selector, owner=self.owner)
+        ).filter(**filterset)
 
 
 class Manager(BaseManager.from_queryset(QuerySet)):

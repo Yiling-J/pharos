@@ -286,6 +286,26 @@ class DeploymentTestCase(BaseCase):
         self.assertEqual(len(deployment.pods.all()), 1)
 
 
+class ServicePodsTestCase(BaseCase):
+
+    def test_service_pods(self):
+        service = models.Service(
+            client=self.client,
+            k8s_object={
+                "metadata": {"uid": "123"},
+                "spec": {"selector": {"foo": "bar"}},
+            },
+        )
+        mock_rs_response = mock.Mock()
+        mock_rs_response.to_dict.return_value = {}
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_rs_response
+        len(service.pods.all())
+        self.assertEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [mock.call.get(_continue=None, label_selector='foo=bar', limit=100)]
+        )
+
+
 class CustomLookup(lookups.Lookup):
     name = "foo"
     type = lookups.Lookup.POST

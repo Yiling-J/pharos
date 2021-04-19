@@ -4,8 +4,10 @@ from pharos import exceptions
 
 
 class RelatedField:
-    def __init__(self, to, through=None):
+    def __init__(self, to, through=None, skip_owner=False):
         self.to = to
+        self.through = None
+        self.skip_owner = skip_owner
         if through:
             self.through = through
 
@@ -15,6 +17,7 @@ class RelatedField:
         clone.model = manager.model
         clone.owner = obj
         clone._client = obj._client
+        clone.skip_owner = self.skip_owner
 
         if self.through:
             clone.through = self.through
@@ -95,9 +98,10 @@ class OwnerRefField(QueryField):
 
 class LabelSelectorField(QueryField):
     lookups = [lookups.LabelSelectorLookup]
+    path = 'spec.selector'
 
     def get_value(self, obj):
-        data = obj["spec"].get("selector")
+        data = find_jsonpath_value(self.jsonpath_expr, obj)
         if data:
             labels = [f"{k}={v}" for k, v in data.get("matchLabels", {}).items()]
             expressions = [
@@ -105,6 +109,18 @@ class LabelSelectorField(QueryField):
                 for i in data.get("matchExpressions", [])
             ]
             return ",".join(labels + expressions)
+        return None
+
+
+class ServiceSelectorField(QueryField):
+    lookups = [lookups.LabelSelectorLookup]
+    path = 'spec.selector'
+
+    def get_value(self, obj):
+        data = find_jsonpath_value(self.jsonpath_expr, obj)
+        if data:
+            labels = [f"{k}={v}" for k, v in data.items()]
+            return ",".join(labels)
         return None
 
 
