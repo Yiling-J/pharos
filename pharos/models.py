@@ -23,6 +23,12 @@ class K8sModel:
         return self.name or ""
 
 
+class Node(K8sModel):
+    class Meta:
+        api_version = "v1"
+        kind = "Node"
+
+
 class Pod(K8sModel):
     class Meta:
         api_version = "v1"
