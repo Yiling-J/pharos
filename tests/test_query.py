@@ -319,6 +319,7 @@ fields.JsonPathField.add_lookup(CustomLookup)
 
 
 class CustomModel(models.K8sModel):
+    id = fields.JsonPathField(path="id")
     task = fields.JsonPathField(path="job.task")
 
     class Meta:
@@ -413,4 +414,28 @@ class CustomModelTestCase(BaseCase):
         }
         self.dynamic_client.resources.get.return_value.get.return_value = mock_response
         queryset = CustomModel.objects.using(self.client).filter(task__startswith="foo")
+        self.assertEqual(len(queryset), 1)
+
+    def test_compare(self):
+        mock_response = mock.Mock()
+        mock_response.to_dict.side_effect = lambda: {
+            "metadata": {},
+            "items": [
+                {"id": 1, "job": {"task": "foofoo"}},
+                {"id": 2, "job": {"task": "fobar"}},
+                {"id": 3, "job": {"task": "barfoobar"}},
+            ],
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        queryset = CustomModel.objects.using(self.client).filter(id__gt=1)
+        self.assertEqual(len(queryset), 2)
+        queryset = CustomModel.objects.using(self.client).filter(id__gt=2)
+        self.assertEqual(len(queryset), 1)
+        queryset = CustomModel.objects.using(self.client).filter(id__gte=2)
+        self.assertEqual(len(queryset), 2)
+        queryset = CustomModel.objects.using(self.client).filter(id__lt=4)
+        self.assertEqual(len(queryset), 3)
+        queryset = CustomModel.objects.using(self.client).filter(id__lt=1)
+        self.assertEqual(len(queryset), 0)
+        queryset = CustomModel.objects.using(self.client).filter(id__lte=1)
         self.assertEqual(len(queryset), 1)

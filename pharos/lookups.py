@@ -96,6 +96,50 @@ class JsonPathStartsWithLookup(Lookup):
         raise exceptions.ValidationError()
 
 
+class JsonPathGreaterLookup(Lookup):
+    name = "gt"
+    type = Lookup.POST
+
+    def validate(self, obj, data):
+        valid = obj > data
+        if valid:
+            return data
+        raise exceptions.ValidationError()
+
+
+class JsonPathLessLookup(Lookup):
+    name = "lt"
+    type = Lookup.POST
+
+    def validate(self, obj, data):
+        valid = obj < data
+        if valid:
+            return data
+        raise exceptions.ValidationError()
+
+
+class JsonPathGreaterEqualLookup(Lookup):
+    name = "gte"
+    type = Lookup.POST
+
+    def validate(self, obj, data):
+        valid = obj >= data
+        if valid:
+            return data
+        raise exceptions.ValidationError()
+
+
+class JsonPathLessEqualLookup(Lookup):
+    name = "lte"
+    type = Lookup.POST
+
+    def validate(self, obj, data):
+        valid = obj <= data
+        if valid:
+            return data
+        raise exceptions.ValidationError()
+
+
 class OwnerRefEqualLookup(Lookup):
     name = "equal"
     type = Lookup.POST

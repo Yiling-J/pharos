@@ -135,5 +135,5 @@ class PersistentVolumeClaim(K8sModel):
 
 class HorizontalPodAutoscaler(K8sModel):
     class Meta:
-        api_version = "autoscaling/v1"
+        api_version = "autoscaling/v2beta2"
         kind = "HorizontalPodAutoscaler"

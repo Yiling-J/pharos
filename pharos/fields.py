@@ -1,3 +1,4 @@
+from datetime import datetime
 from jsonpath_ng.ext import parse
 from pharos import lookups
 from pharos import exceptions
@@ -72,6 +73,10 @@ class JsonPathField(QueryField):
         lookups.JsonPathInLookup,
         lookups.JsonPathContainsLookup,
         lookups.JsonPathStartsWithLookup,
+        lookups.JsonPathGreaterLookup,
+        lookups.JsonPathLessLookup,
+        lookups.JsonPathGreaterEqualLookup,
+        lookups.JsonPathLessEqualLookup,
     ]
 
     def get_value(self, obj):
@@ -84,6 +89,10 @@ class K8sApiField(QueryField):
         lookups.JsonPathInLookup,
         lookups.JsonPathContainsLookup,
         lookups.JsonPathStartsWithLookup,
+        lookups.JsonPathGreaterLookup,
+        lookups.JsonPathLessLookup,
+        lookups.JsonPathGreaterEqualLookup,
+        lookups.JsonPathLessEqualLookup,
     ]
 
     def get_value(self, obj):
@@ -128,6 +137,23 @@ class ServiceSelectorField(QueryField):
 
 class FieldSelectorField(QueryField):
     lookups = [lookups.FieldSelectorLookup]
+
+
+class DateTimeField(QueryField):
+    lookups = [
+        lookups.JsonPathEqualLookup,
+        lookups.JsonPathGreaterLookup,
+        lookups.JsonPathLessLookup,
+        lookups.JsonPathGreaterEqualLookup,
+        lookups.JsonPathLessEqualLookup,
+    ]
+
+    def get_value(self, obj):
+        data = find_jsonpath_value(self.jsonpath_expr, obj)
+        if data:
+            data = data.replace("Z", "+00:00")
+            return datetime.fromisoformat(data)
+        return None
 
 
 def find_jsonpath_value(jsonpath_expr, data):
