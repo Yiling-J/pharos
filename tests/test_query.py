@@ -285,6 +285,21 @@ class DeploymentTestCase(BaseCase):
 
         self.assertEqual(len(deployment.pods.all()), 1)
 
+    def test_refresh(self):
+        deployment = models.Deployment(
+            client=self.client,
+            k8s_object={
+                "metadata": {"uid": "123", "name": "foo"},
+                "spec": {"selector": {"matchLabels": {"app": "test"}}},
+            },
+        )
+        self.assertEqual(deployment.name, "foo")
+        mock_response = mock.Mock()
+        mock_response.to_dict.side_effect = lambda: {"metadata": {"name": "bar"}}
+        self.dynamic_client.resources.get.return_value.get.return_value = mock_response
+        deployment.refresh()
+        self.assertEqual(deployment.name, "bar")
+
 
 class ServicePodsTestCase(BaseCase):
     def test_service_pods(self):

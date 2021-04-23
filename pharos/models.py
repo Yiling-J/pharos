@@ -10,7 +10,7 @@ class Model:
     owner = fields.OwnerRefField()
 
     objects = managers.Manager()
-    client = None
+    _client = None
 
     def __init__(self, k8s_object, client):
         self.k8s_object = k8s_object
@@ -21,6 +21,14 @@ class Model:
 
     def __str__(self):
         return self.name or ""
+
+    def refresh(self):
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.Meta.api_version, kind=self.Meta.kind
+        )
+        result = api_spec.get(name=self.name, namespace=self.namespace).to_dict()
+        self.k8s_object = result
 
 
 class Pod(Model):

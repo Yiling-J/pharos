@@ -63,6 +63,10 @@ Deployment.objects.using(client).filter(replicas__lt=5)
 # refresh query
 pods_refreshed = pods.all()
 
+# refresh instance
+pod = pods[0]
+pod.refresh()
+
 ```
 
 extend existing model
