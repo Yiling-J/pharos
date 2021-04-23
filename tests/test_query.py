@@ -318,7 +318,7 @@ class CustomLookup(lookups.Lookup):
 fields.JsonPathField.add_lookup(CustomLookup)
 
 
-class CustomModel(models.K8sModel):
+class CustomModel(models.Model):
     id = fields.JsonPathField(path="id")
     task = fields.JsonPathField(path="job.task")
 

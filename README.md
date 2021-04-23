@@ -91,10 +91,10 @@ MyDeployment.objects.using(client).filter(created__gt=datetime(2010, 1, 1, tzinf
 create your own model
 
 ```python
-from pharos.models import K8smodel
+from pharos.models import Model
 
 
-class TestResource(K8smodel):
+class TestResource(Model):
 
     class Meta:
         api_version = "v1"

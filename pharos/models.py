@@ -2,7 +2,7 @@ from pharos import managers
 from pharos import fields
 
 
-class K8sModel:
+class Model:
     name = fields.K8sApiField(path="metadata.name")
     namespace = fields.K8sApiField(path="metadata.namespace")
     selector = fields.LabelSelectorField()
@@ -23,13 +23,13 @@ class K8sModel:
         return self.name or ""
 
 
-class Pod(K8sModel):
+class Pod(Model):
     class Meta:
         api_version = "v1"
         kind = "Pod"
 
 
-class Node(K8sModel):
+class Node(Model):
     pods = fields.RelatedField(to=Pod, to_field="field_selector", skip_owner=True)
 
     class Meta:
@@ -41,7 +41,7 @@ class Node(K8sModel):
         return f"spec.nodeName={self.name}"
 
 
-class ReplicaSet(K8sModel):
+class ReplicaSet(Model):
     pods = fields.RelatedField(to=Pod)
 
     class Meta:
@@ -49,7 +49,7 @@ class ReplicaSet(K8sModel):
         kind = "ReplicaSet"
 
 
-class Deployment(K8sModel):
+class Deployment(Model):
     replicasets = fields.RelatedField(to=ReplicaSet)
     pods = fields.RelatedField(to=Pod, through=ReplicaSet)
 
@@ -58,61 +58,61 @@ class Deployment(K8sModel):
         kind = "Deployment"
 
 
-class StatefulSet(K8sModel):
+class StatefulSet(Model):
     class Meta:
         api_version = "v1"
         kind = "StatefulSet"
 
 
-class ConfigMap(K8sModel):
+class ConfigMap(Model):
     class Meta:
         api_version = "v1"
         kind = "ConfigMap"
 
 
-class CronJob(K8sModel):
+class CronJob(Model):
     class Meta:
         api_version = "batch/v2alpha1"
         kind = "CronJob"
 
 
-class DaemonSet(K8sModel):
+class DaemonSet(Model):
     class Meta:
         api_version = "v1"
         kind = "DaemonSet"
 
 
-class Endpoints(K8sModel):
+class Endpoints(Model):
     class Meta:
         api_version = "v1"
         kind = "Endpoints"
 
 
-class Event(K8sModel):
+class Event(Model):
     class Meta:
         api_version = "v1"
         kind = "Event"
 
 
-class Ingress(K8sModel):
+class Ingress(Model):
     class Meta:
         api_version = "networking.k8s.io/v1beta1"
         kind = "Ingress"
 
 
-class Job(K8sModel):
+class Job(Model):
     class Meta:
         api_version = "batch/v1"
         kind = "Job"
 
 
-class Namespace(K8sModel):
+class Namespace(Model):
     class Meta:
         api_version = "v1"
         kind = "Namespace"
 
 
-class Service(K8sModel):
+class Service(Model):
     pods = fields.RelatedField(to=Pod, skip_owner=True)
     selector = fields.ServiceSelectorField()
 
@@ -121,19 +121,19 @@ class Service(K8sModel):
         kind = "Service"
 
 
-class PersistentVolume(K8sModel):
+class PersistentVolume(Model):
     class Meta:
         api_version = "v1"
         kind = "PersistentVolume"
 
 
-class PersistentVolumeClaim(K8sModel):
+class PersistentVolumeClaim(Model):
     class Meta:
         api_version = "v1"
         kind = "PersistentVolumeClaim"
 
 
-class HorizontalPodAutoscaler(K8sModel):
+class HorizontalPodAutoscaler(Model):
     class Meta:
         api_version = "autoscaling/v2beta2"
         kind = "HorizontalPodAutoscaler"
