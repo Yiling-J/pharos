@@ -14,6 +14,10 @@ from pharos.client import Client
 
 
 client = Client('YOUR_PATH/.kube/config')
+
+# if you have multiple context in one config file
+client = Client('YOUR_PATH/.kube/config', context='context_you_want')
+
 ```
 
 create client with settings
