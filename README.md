@@ -16,7 +16,10 @@ from pharos.client import Client
 client = Client('YOUR_PATH/.kube/config')
 
 # if you have multiple context in one config file
-client = Client('YOUR_PATH/.kube/config', context='context_you_want')
+client = Client('YOUR_PATH/.kube/config', context='context_name_you_want')
+
+# switch client context
+client.use_context('new_context_name')
 
 ```
 
