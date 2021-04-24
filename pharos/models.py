@@ -1,5 +1,6 @@
 from pharos import managers
 from pharos import fields
+from pharos import utils
 
 
 class Model:
@@ -13,7 +14,7 @@ class Model:
     _client = None
 
     def __init__(self, k8s_object, client):
-        self.k8s_object = k8s_object
+        self.k8s_object = utils.ReadOnlyDict(k8s_object)
         self._client = client
 
     def __repr__(self):
@@ -28,7 +29,7 @@ class Model:
             api_version=self.Meta.api_version, kind=self.Meta.kind
         )
         result = api_spec.get(name=self.name, namespace=self.namespace).to_dict()
-        self.k8s_object = result
+        self.k8s_object = utils.ReadOnlyDict(result)
 
 
 class Pod(Model):
