@@ -1,0 +1,6 @@
+apiVersion: "pharos.py/v1"
+kind: Variable
+metadata:
+  name: {{name}}
+json:
+{{value|yaml|indent(first=True)}}

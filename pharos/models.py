@@ -146,3 +146,15 @@ class HorizontalPodAutoscaler(Model):
     class Meta:
         api_version = "autoscaling/v2beta2"
         kind = "HorizontalPodAutoscaler"
+
+
+class CustomResourceDefinition(Model):
+    class Meta:
+        api_version = "apiextensions.k8s.io/v1"
+        kind = "CustomResourceDefinition"
+
+
+class PharosVariable(Model):
+    class Meta:
+        api_version = "pharos.py/v1"
+        kind = "Variable"

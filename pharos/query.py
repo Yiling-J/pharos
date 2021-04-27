@@ -1,5 +1,33 @@
+from pathlib import Path
+from pydoc import locate
 from pharos import iterator
 from pharos import exceptions
+from pharos import backend, jinja
+
+
+variable_spec = {
+    "apiVersion": "apiextensions.k8s.io/v1",
+    "kind": "CustomResourceDefinition",
+    "metadata": {"name": "variables.pharos.py"},
+    "spec": {
+        "group": "pharos.py",
+        "versions": [
+            {
+                "name": "v1",
+                "served": True,
+                "storage": True,
+                "schema": {
+                    "openAPIV3Schema": {
+                        "type": "object",
+                        "properties": {"json": {"type": "object"}},
+                    }
+                },
+            }
+        ],
+        "scope": "Cluster",
+        "names": {"plural": "variables", "singular": "variable", "kind": "Variable"},
+    },
+}
 
 
 class QuerySet:
@@ -45,6 +73,27 @@ class QuerySet:
         if not num:
             raise exceptions.ObjectDoesNotExist()
         raise exceptions.MultipleObjectsReturned()
+
+    def _create_variable_crd(self):
+        from pharos.models import CustomResourceDefinition
+        return CustomResourceDefinition.objects.using(self._client).create(
+            'variable_crd.yaml', {}, raw=True
+        )
+
+    def create(self, template, variables, internal=False):
+        template_backend = backend.TemplateBackend()
+        if internal:
+            engine = jinja.JinjaEngine(internal=True)
+        else:
+            engine = locate(self._client.settings.tepmlate_engine)()
+        template_backend.set_engine(engine)
+        json_spec = template_backend.render(template, variables, internal)
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
+        )
+        response = api_spec.create(body=json_spec)
+        return self.model(client=self._client, k8s_object=response.to_dict())
 
     def limit(self, count):
         self._limit = count
