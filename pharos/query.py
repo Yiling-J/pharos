@@ -1,4 +1,3 @@
-from pathlib import Path
 from pydoc import locate
 from pharos import iterator
 from pharos import exceptions
@@ -83,9 +82,9 @@ class QuerySet:
     def create(self, template, variables, internal=False):
         template_backend = backend.TemplateBackend()
         if internal:
-            engine = jinja.JinjaEngine(internal=True)
+            engine = jinja.JinjaEngine(self._client, internal=True)
         else:
-            engine = locate(self._client.settings.tepmlate_engine)()
+            engine = locate(self._client.settings.tepmlate_engine)(self._client)
         template_backend.set_engine(engine)
         json_spec = template_backend.render(template, variables, internal)
         client = self._client.dynamic_client

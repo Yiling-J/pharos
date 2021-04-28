@@ -13,7 +13,7 @@ class TemplateBackend:
         return json_spec
 
     def get_variable_hash(self, variables):
-        return hashlib.sha256(json.dumps(variables).encode()).hexdigest()
+        return hashlib.md5(json.dumps(variables).encode()).hexdigest()
 
     def update_annotations(self, json_spec, template, variables):
         variable_hash = self.get_variable_hash(variables)
