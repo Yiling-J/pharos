@@ -7,17 +7,14 @@ def to_yaml(value):
 
 
 class JinjaEngine:
-
     def __init__(self, client, internal=False):
         loader = client.settings.jinja_loader
         if internal:
-            loader = PackageLoader('pharos', 'templates')
+            loader = PackageLoader("pharos", "templates")
         elif not loader:
             raise
-        self.env = Environment(
-            loader=loader
-        )
-        self.env.filters['yaml'] = to_yaml
+        self.env = Environment(loader=loader)
+        self.env.filters["yaml"] = to_yaml
 
     def render(self, template_path, variables):
         template = self.env.get_template(template_path)

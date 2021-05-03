@@ -1,3 +1,4 @@
+import yaml
 from pharos import managers
 from pharos import fields
 from pharos import utils
@@ -30,6 +31,10 @@ class Model:
         )
         result = api_spec.get(name=self.name, namespace=self.namespace).to_dict()
         self.k8s_object = utils.ReadOnlyDict(result)
+
+    @property
+    def yaml(self):
+        return yaml.dump(self.k8s_object, default_flow_style=False)
 
 
 class Pod(Model):

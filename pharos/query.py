@@ -1,6 +1,9 @@
+import time
 from pydoc import locate
+from kubernetes.dynamic import exceptions as api_exceptions
 from pharos import iterator
 from pharos import exceptions
+from pharos import models
 from pharos import backend, jinja
 
 
@@ -74,10 +77,10 @@ class QuerySet:
         raise exceptions.MultipleObjectsReturned()
 
     def _create_variable_crd(self):
-        from pharos.models import CustomResourceDefinition
-        return CustomResourceDefinition.objects.using(self._client).create(
-            'variable_crd.yaml', {}, raw=True
+        models.CustomResourceDefinition.objects.using(self._client).create(
+            "variable_crd.yaml", {}, internal=True
         )
+        time.sleep(0.1)
 
     def create(self, template, variables, internal=False):
         template_backend = backend.TemplateBackend()
@@ -91,8 +94,43 @@ class QuerySet:
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
-        response = api_spec.create(body=json_spec)
-        return self.model(client=self._client, k8s_object=response.to_dict())
+        response = api_spec.create(
+            body=json_spec, namespace=json_spec['metadata'].get('namespace', 'default')
+        )
+        instance = self.model(client=self._client, k8s_object=response.to_dict())
+        if internal:
+            return instance
+
+        variable_name = f"{instance.name}-{instance.namespace}"
+        try:
+            models.PharosVariable.objects.using(self._client).create(
+                "variables.yaml",
+                {"name": variable_name, "value": variables},
+                internal=True,
+            )
+        except api_exceptions.ResourceNotFoundError:
+            self._create_variable_crd()
+            models.PharosVariable.objects.using(self._client).create(
+                "variables.yaml",
+                {"name": variable_name, "value": variables},
+                internal=True,
+            )
+        except api_exceptions.ConflictError:
+            models.PharosVariable.objects.using(self._client).delete(variable_name)
+            models.PharosVariable.objects.using(self._client).create(
+                "variables.yaml",
+                {"name": variable_name, "value": variables},
+                internal=True,
+            )
+
+        return instance
+
+    def delete(self, name, namspace=None):
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
+        )
+        return api_spec.delete(name, namspace)
 
     def limit(self, count):
         self._limit = count

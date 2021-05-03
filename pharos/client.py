@@ -7,7 +7,7 @@ default_settings = {
     "enable_chunk": True,
     "chunk_size": 200,
     "tepmlate_engine": "pharos.jinja.JinjaEngine",
-    "jinja_loader": None
+    "jinja_loader": None,
 }
 
 
