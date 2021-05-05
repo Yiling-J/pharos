@@ -1,4 +1,5 @@
 from unittest import TestCase, mock
+from jinja2 import PackageLoader
 from pharos import models, fields, exceptions, lookups
 
 
@@ -8,6 +9,8 @@ class BaseCase(TestCase):
         self.client = mock.Mock()
         self.client.settings.enable_chunk = True
         self.client.settings.chunk_size = 100
+        self.client.settings.jinja_loader = PackageLoader("tests", "")
+        self.client.settings.template_engine = "pharos.jinja.JinjaEngine"
         self.client.dynamic_client = self.dynamic_client
 
 
@@ -299,6 +302,58 @@ class DeploymentTestCase(BaseCase):
         self.dynamic_client.resources.get.return_value.get.return_value = mock_response
         deployment.refresh()
         self.assertEqual(deployment.name, "bar")
+
+    def test_create_deployment(self):
+        mock_response = {"metadata": {"name": "foobar", "namespace": "default"}}
+        self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        models.Deployment.objects.using(self.client).create("test.yaml", {"foo": "bar"})
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.create(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx"},
+                            "annotations": {
+                                "pharos/template-path": "test.yaml",
+                                "pharos/variable-resource": "nginx-deployment-default",
+                            },
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="default",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "pharos.py/v1",
+                        "kind": "Variable",
+                        "metadata": {"name": "foobar-default"},
+                        "json": {"foo": "bar"},
+                    },
+                    namespace="default",
+                ),
+            ],
+        )
 
 
 class ServicePodsTestCase(BaseCase):

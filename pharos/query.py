@@ -87,7 +87,7 @@ class QuerySet:
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
         else:
-            engine = locate(self._client.settings.tepmlate_engine)(self._client)
+            engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
         json_spec = template_backend.render(template, variables, internal)
         client = self._client.dynamic_client
@@ -95,7 +95,7 @@ class QuerySet:
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
         response = api_spec.create(
-            body=json_spec, namespace=json_spec['metadata'].get('namespace', 'default')
+            body=json_spec, namespace=json_spec["metadata"].get("namespace", "default")
         )
         instance = self.model(client=self._client, k8s_object=response.to_dict())
         if internal:

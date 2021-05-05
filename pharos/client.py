@@ -6,7 +6,7 @@ default_settings = {
     "disable_compress": False,
     "enable_chunk": True,
     "chunk_size": 200,
-    "tepmlate_engine": "pharos.jinja.JinjaEngine",
+    "template_engine": "pharos.jinja.JinjaEngine",
     "jinja_loader": None,
 }
 
