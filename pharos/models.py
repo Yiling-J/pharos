@@ -10,6 +10,12 @@ class Model:
     selector = fields.LabelSelectorField()
     field_selector = fields.FieldSelectorField()
     owner = fields.OwnerRefField()
+    variable = fields.RelatedField(
+        to="pharos.models.PharosVariable",
+        from_field="variable_name",
+        to_field="name",
+        skip_owner=True,
+    )
 
     objects = managers.Manager()
     _client = None
@@ -35,6 +41,10 @@ class Model:
     @property
     def yaml(self):
         return yaml.dump(self.k8s_object, default_flow_style=False)
+
+    @property
+    def variable_name(self):
+        return f"{self.name}-{self.namespace}"
 
 
 class Pod(Model):

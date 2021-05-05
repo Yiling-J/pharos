@@ -328,8 +328,8 @@ class DeploymentTestCase(BaseCase):
                             "name": "nginx-deployment",
                             "labels": {"app": "nginx"},
                             "annotations": {
-                                "pharos/template-path": "test.yaml",
-                                "pharos/variable-resource": "nginx-deployment-default",
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "nginx-deployment-default",
                             },
                         },
                         "spec": {
@@ -366,9 +366,7 @@ class DeploymentTestCase(BaseCase):
     def test_create_deployment_no_variable_crd(self):
         mock_response = {"metadata": {"name": "foobar", "namespace": "default"}}
         resource_mock = mock.Mock()
-        resource_mock.create.return_value.to_dict.return_value = (
-            mock_response
-        )
+        resource_mock.create.return_value.to_dict.return_value = mock_response
         self.dynamic_client.resources.get.side_effect = [
             resource_mock,  # create deployment
             api_exceptions.ResourceNotFoundError,  # create variable
@@ -399,8 +397,8 @@ class DeploymentTestCase(BaseCase):
                             "name": "nginx-deployment",
                             "labels": {"app": "nginx"},
                             "annotations": {
-                                "pharos/template-path": "test.yaml",
-                                "pharos/variable-resource": "nginx-deployment-default",
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "nginx-deployment-default",
                             },
                         },
                         "spec": {
@@ -472,12 +470,12 @@ class DeploymentTestCase(BaseCase):
     def test_create_deployment_replace_crd(self):
         mock_response = {"metadata": {"name": "foobar", "namespace": "default"}}
         resource_mock = mock.Mock()
-        resource_mock.create.return_value.to_dict.return_value = (
-            mock_response
-        )
+        resource_mock.create.return_value.to_dict.return_value = mock_response
         self.dynamic_client.resources.get.side_effect = [
             resource_mock,  # create deployment
-            api_exceptions.api_exception(api_exceptions.ApiException(status=409)),  # create variable
+            api_exceptions.api_exception(
+                api_exceptions.ApiException(status=409)
+            ),  # create variable
             resource_mock,  # create crd
             resource_mock,  # create variable
         ]
@@ -486,9 +484,11 @@ class DeploymentTestCase(BaseCase):
             self.dynamic_client.resources.method_calls,
             [
                 mock.call.get(api_version="v1", kind="Deployment"),
-                mock.call.get(api_version='pharos.py/v1', kind='Variable'),  # create
-                mock.call.get(api_version='pharos.py/v1', kind='Variable'),  # delete
-                mock.call.get(api_version="pharos.py/v1", kind="Variable"),  # create again
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),  # create
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),  # delete
+                mock.call.get(
+                    api_version="pharos.py/v1", kind="Variable"
+                ),  # create again
             ],
         )
         self.assertSequenceEqual(
@@ -502,8 +502,8 @@ class DeploymentTestCase(BaseCase):
                             "name": "nginx-deployment",
                             "labels": {"app": "nginx"},
                             "annotations": {
-                                "pharos/template-path": "test.yaml",
-                                "pharos/variable-resource": "nginx-deployment-default",
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "nginx-deployment-default",
                             },
                         },
                         "spec": {
@@ -525,7 +525,7 @@ class DeploymentTestCase(BaseCase):
                     },
                     namespace="default",
                 ),
-                mock.call.delete('foobar-default', None),
+                mock.call.delete("foobar-default", None),
                 mock.call.create(
                     body={
                         "apiVersion": "pharos.py/v1",

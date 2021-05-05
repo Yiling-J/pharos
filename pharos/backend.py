@@ -1,6 +1,6 @@
 class TemplateBackend:
     engine = None
-    prefix = "pharos"
+    prefix = "pharos.py"
 
     def render(self, template, variables, internal):
         json_spec = self.engine.render(template, variables)
@@ -10,8 +10,8 @@ class TemplateBackend:
 
     def update_annotations(self, json_spec, template, variables):
         extra_annotations = {
-            f"{self.prefix}/template-path": template,
-            f"{self.prefix}/variable-resource": f'{json_spec["metadata"]["name"]}-{json_spec["metadata"].get("namespace", "default")}',
+            f"{self.prefix}/template": template,
+            f"{self.prefix}/variable": f'{json_spec["metadata"]["name"]}-{json_spec["metadata"].get("namespace", "default")}',
         }
         if "annotations" in json_spec["metadata"]:
             json_spec["metadata"]["annotations"].update(extra_annotations)
