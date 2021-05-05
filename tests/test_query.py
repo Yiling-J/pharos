@@ -1,5 +1,6 @@
 from unittest import TestCase, mock
 from jinja2 import PackageLoader
+from kubernetes.dynamic import exceptions as api_exceptions
 from pharos import models, fields, exceptions, lookups
 
 
@@ -310,6 +311,13 @@ class DeploymentTestCase(BaseCase):
         )
         models.Deployment.objects.using(self.client).create("test.yaml", {"foo": "bar"})
         self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+            ],
+        )
+        self.assertSequenceEqual(
             self.dynamic_client.resources.get.return_value.method_calls,
             [
                 mock.call.create(
@@ -339,6 +347,112 @@ class DeploymentTestCase(BaseCase):
                                     ]
                                 },
                             },
+                        },
+                    },
+                    namespace="default",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "pharos.py/v1",
+                        "kind": "Variable",
+                        "metadata": {"name": "foobar-default"},
+                        "json": {"foo": "bar"},
+                    },
+                    namespace="default",
+                ),
+            ],
+        )
+
+    def test_create_deployment_no_variable_crd(self):
+        mock_response = {"metadata": {"name": "foobar", "namespace": "default"}}
+        resource_mock = mock.Mock()
+        resource_mock.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        self.dynamic_client.resources.get.side_effect = [
+            resource_mock,  # create deployment
+            api_exceptions.ResourceNotFoundError,  # create variable
+            resource_mock,  # create crd
+            resource_mock,  # create variable
+        ]
+        models.Deployment.objects.using(self.client).create("test.yaml", {"foo": "bar"})
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+                mock.call.get(
+                    api_version="apiextensions.k8s.io/v1",
+                    kind="CustomResourceDefinition",
+                ),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+            ],
+        )
+        self.assertSequenceEqual(
+            resource_mock.method_calls,
+            [
+                mock.call.create(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx"},
+                            "annotations": {
+                                "pharos/template-path": "test.yaml",
+                                "pharos/variable-resource": "nginx-deployment-default",
+                            },
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="default",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "apiextensions.k8s.io/v1",
+                        "kind": "CustomResourceDefinition",
+                        "metadata": {"name": "variables.pharos.py"},
+                        "spec": {
+                            "group": "pharos.py",
+                            "names": {
+                                "kind": "Variable",
+                                "plural": "variables",
+                                "singular": "variable",
+                            },
+                            "scope": "Cluster",
+                            "versions": [
+                                {
+                                    "name": "v1",
+                                    "schema": {
+                                        "openAPIV3Schema": {
+                                            "properties": {
+                                                "json": {
+                                                    "x-kubernetes-preserve-unknown-fields": True,
+                                                    "type": "object",
+                                                }
+                                            },
+                                            "type": "object",
+                                        }
+                                    },
+                                    "served": True,
+                                    "storage": True,
+                                }
+                            ],
                         },
                     },
                     namespace="default",
