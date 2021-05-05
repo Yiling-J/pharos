@@ -469,6 +469,75 @@ class DeploymentTestCase(BaseCase):
             ],
         )
 
+    def test_create_deployment_replace_crd(self):
+        mock_response = {"metadata": {"name": "foobar", "namespace": "default"}}
+        resource_mock = mock.Mock()
+        resource_mock.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        self.dynamic_client.resources.get.side_effect = [
+            resource_mock,  # create deployment
+            api_exceptions.api_exception(api_exceptions.ApiException(status=409)),  # create variable
+            resource_mock,  # create crd
+            resource_mock,  # create variable
+        ]
+        models.Deployment.objects.using(self.client).create("test.yaml", {"foo": "bar"})
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(api_version='pharos.py/v1', kind='Variable'),  # create
+                mock.call.get(api_version='pharos.py/v1', kind='Variable'),  # delete
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),  # create again
+            ],
+        )
+        self.assertSequenceEqual(
+            resource_mock.method_calls,
+            [
+                mock.call.create(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx"},
+                            "annotations": {
+                                "pharos/template-path": "test.yaml",
+                                "pharos/variable-resource": "nginx-deployment-default",
+                            },
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="default",
+                ),
+                mock.call.delete('foobar-default', None),
+                mock.call.create(
+                    body={
+                        "apiVersion": "pharos.py/v1",
+                        "kind": "Variable",
+                        "metadata": {"name": "foobar-default"},
+                        "json": {"foo": "bar"},
+                    },
+                    namespace="default",
+                ),
+            ],
+        )
+
 
 class ServicePodsTestCase(BaseCase):
     def test_service_pods(self):
