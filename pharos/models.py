@@ -16,6 +16,7 @@ class Model:
         to_field="name",
         skip_owner=True,
     )
+    template = fields.JsonPathField(path='metadata.annotations."pharos.py/template"')
 
     objects = managers.Manager()
     _client = None
@@ -170,6 +171,8 @@ class CustomResourceDefinition(Model):
 
 
 class PharosVariable(Model):
+    data = fields.JsonPathField(path="json")
+
     class Meta:
         api_version = "pharos.py/v1"
         kind = "Variable"

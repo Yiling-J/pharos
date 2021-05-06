@@ -10,7 +10,7 @@ class BaseCase(TestCase):
         self.client = mock.Mock()
         self.client.settings.enable_chunk = True
         self.client.settings.chunk_size = 100
-        self.client.settings.jinja_loader = PackageLoader("tests", "")
+        self.client.settings.jinja_loader = PackageLoader("tests", "./")
         self.client.settings.template_engine = "pharos.jinja.JinjaEngine"
         self.client.dynamic_client = self.dynamic_client
 
@@ -305,11 +305,20 @@ class DeploymentTestCase(BaseCase):
         self.assertEqual(deployment.name, "bar")
 
     def test_create_deployment(self):
-        mock_response = {"metadata": {"name": "foobar", "namespace": "default"}}
+        mock_response = {
+            "metadata": {
+                "name": "foobar",
+                "namespace": "default",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            }
+        }
         self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
             mock_response
         )
-        models.Deployment.objects.using(self.client).create("test.yaml", {"foo": "bar"})
+        deployment = models.Deployment.objects.using(self.client).create(
+            "test.yaml", {"foo": "bar"}
+        )
+        self.assertEqual(deployment.template, "test.yaml")
         self.assertSequenceEqual(
             self.dynamic_client.resources.method_calls,
             [
