@@ -77,10 +77,13 @@ class QuerySet:
         raise exceptions.MultipleObjectsReturned()
 
     def _create_variable_crd(self):
-        models.CustomResourceDefinition.objects.using(self._client).create(
-            "variable_crd.yaml", {}, internal=True
-        )
-        time.sleep(0.1)
+        try:
+            models.CustomResourceDefinition.objects.using(self._client).create(
+                "variable_crd.yaml", {}, internal=True
+            )
+            time.sleep(0.1)
+        except:
+            pass
 
     def create(self, template, variables, internal=False):
         template_backend = backend.TemplateBackend()
@@ -94,36 +97,37 @@ class QuerySet:
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
-        response = api_spec.create(
-            body=json_spec, namespace=json_spec["metadata"].get("namespace", "default")
+        api_spec.create(
+            body=json_spec,
+            namespace=json_spec["metadata"].get("namespace", "default"),
         )
-        instance = self.model(client=self._client, k8s_object=response.to_dict())
+
+        self._create_variable_crd()
+        models.PharosVariable.objects.using(self._client).create(
+            "variables.yaml",
+            {"name": variable_name, "value": variables},
+            internal=True,
+        )
+
+    def _update(self, template, variables, resource_version, internal=False):
+        template_backend = backend.TemplateBackend()
         if internal:
-            return instance
+            engine = jinja.JinjaEngine(self._client, internal=True)
+        else:
+            engine = locate(self._client.settings.template_engine)(self._client)
+        template_backend.set_engine(engine)
+        json_spec = template_backend.render(template, variables, internal)
+        json_spec["metadata"]["resourceVersion"] = resource_version
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
+        )
+        response = api_spec.replace(
+            body=json_spec,
+            namespace=json_spec["metadata"].get("namespace", "default"),
+        )
 
-        variable_name = f"{instance.name}-{instance.namespace}"
-        try:
-            models.PharosVariable.objects.using(self._client).create(
-                "variables.yaml",
-                {"name": variable_name, "value": variables},
-                internal=True,
-            )
-        except api_exceptions.ResourceNotFoundError:
-            self._create_variable_crd()
-            models.PharosVariable.objects.using(self._client).create(
-                "variables.yaml",
-                {"name": variable_name, "value": variables},
-                internal=True,
-            )
-        except api_exceptions.ConflictError:
-            models.PharosVariable.objects.using(self._client).delete(variable_name)
-            models.PharosVariable.objects.using(self._client).create(
-                "variables.yaml",
-                {"name": variable_name, "value": variables},
-                internal=True,
-            )
-
-        return instance
+        return response.to_dict()
 
     def delete(self, name, namspace=None):
         client = self._client.dynamic_client

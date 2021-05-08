@@ -1,12 +1,17 @@
 import yaml
+from pydoc import locate
+from kubernetes.dynamic import exceptions as api_exceptions
 from pharos import managers
 from pharos import fields
 from pharos import utils
+from pharos import exceptions
+from pharos import backend
 
 
 class Model:
     name = fields.K8sApiField(path="metadata.name")
     namespace = fields.K8sApiField(path="metadata.namespace")
+    resource_version = fields.JsonPathField(path="metadata.resourceVersion")
     selector = fields.LabelSelectorField()
     field_selector = fields.FieldSelectorField()
     owner = fields.OwnerRefField()
@@ -36,8 +41,40 @@ class Model:
         api_spec = client.resources.get(
             api_version=self.Meta.api_version, kind=self.Meta.kind
         )
-        result = api_spec.get(name=self.name, namespace=self.namespace).to_dict()
+        result = api_spec.get(
+            name=self.name, namespace=self.namespace or "default"
+        ).to_dict()
         self.k8s_object = utils.ReadOnlyDict(result)
+
+    def reload(self):
+        resource_version = self.resource_version
+        template_backend = backend.TemplateBackend()
+        engine = locate(self._client.settings.template_engine)(self._client)
+        template_backend.set_engine(engine)
+        template = self.template
+        variable = self.variable.get()
+        self._variable = variable
+        if template and variable:
+            json_spec = template_backend.render(template, variable.data, internal=False)
+            json_spec["metadata"]["resourceVersion"] = resource_version
+            self.k8s_object = utils.ReadOnlyDict(json_spec)
+        else:
+            raise exceptions.TemplateNotValid()
+
+    def deploy(self):
+        self.refresh()  # make sure we have latest resource version
+        self.reload()  # make sure we use latest template
+
+        self.objects.using(self._client)._update(
+            self.template, self._variable.data, self.resource_version
+        )
+        variable_name = f"{self.name}-{self.namespace or 'default'}"
+        self.variable._update(
+            "variables.yaml",
+            {"name": variable_name, "value": self._variable.data},
+            self._variable.resource_version,
+            internal=True,
+        )
 
     @property
     def yaml(self):
