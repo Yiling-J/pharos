@@ -112,3 +112,41 @@ class TestResource(Model):
         kind = "TestResource"
 
 ```
+
+create deployment(jinja)
+
+```python
+from jinja2 import FileSystemLoader
+from pharos.models import Deployment
+from pharos.client import Client
+
+
+client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
+
+
+Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
+
+
+```
+
+update deployment(jinja)
+
+```python
+from jinja2 import FileSystemLoader
+from pharos.models import Deployment
+from pharos.client import Client
+
+
+client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
+
+
+# template change
+deployment = Deployment.objects.using(client).all()[0]
+deployment.deploy()
+
+
+# also change variable
+deployment.set_variable({'bar': 'foo'})
+deployment.deploy()
+
+```
