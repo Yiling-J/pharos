@@ -316,7 +316,7 @@ class DeploymentTestCase(BaseCase):
             mock_response
         )
         deployment = models.Deployment.objects.using(self.client).create(
-            "test.yaml", {"foo": "bar"}
+            "test.yaml", {"label_name": "foo"}
         )
         self.assertEqual(deployment.template, "test.yaml")
         self.assertSequenceEqual(
@@ -339,7 +339,7 @@ class DeploymentTestCase(BaseCase):
                         "kind": "Deployment",
                         "metadata": {
                             "name": "nginx-deployment",
-                            "labels": {"app": "nginx"},
+                            "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
                                 "pharos.py/variable": "nginx-deployment-default",
@@ -404,7 +404,7 @@ class DeploymentTestCase(BaseCase):
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
                         "metadata": {"name": "foobar-default"},
-                        "json": {"foo": "bar"},
+                        "json": {"label_name": "foo"},
                     },
                     namespace="default",
                 ),
@@ -418,7 +418,7 @@ class DeploymentTestCase(BaseCase):
                 "namespace": "default",
                 "annotations": {"pharos.py/template": "test.yaml"},
             },
-            "json": {"foo": "bar"},
+            "json": {"label_name": "foo"},
         }
         self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
             mock_response
@@ -463,7 +463,7 @@ class DeploymentTestCase(BaseCase):
                         "kind": "Deployment",
                         "metadata": {
                             "name": "nginx-deployment",
-                            "labels": {"app": "nginx"},
+                            "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
                                 "pharos.py/variable": "nginx-deployment-default",
@@ -500,7 +500,7 @@ class DeploymentTestCase(BaseCase):
                             "name": "nginx-deployment-default",
                             "resourceVersion": None,
                         },
-                        "json": {"foo": "bar"},
+                        "json": {"label_name": "foo"},
                     },
                     namespace="default",
                 ),
@@ -514,7 +514,7 @@ class DeploymentTestCase(BaseCase):
                 "namespace": "default",
                 "annotations": {"pharos.py/template": "test.yaml"},
             },
-            "json": {"foo": "bar"},
+            "json": {"label_name": "foo"},
         }
         self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
             mock_response
@@ -533,7 +533,7 @@ class DeploymentTestCase(BaseCase):
                 }
             },
         )
-        deployment.set_variable({"bar": "foo"})
+        deployment.set_variable({"label_name": "bar"})
         deployment.deploy()
         self.assertSequenceEqual(
             self.dynamic_client.resources.method_calls,
@@ -554,7 +554,7 @@ class DeploymentTestCase(BaseCase):
                         "kind": "Deployment",
                         "metadata": {
                             "name": "nginx-deployment",
-                            "labels": {"app": "nginx"},
+                            "labels": {"app": "nginx", "bar": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
                                 "pharos.py/variable": "nginx-deployment-default",
@@ -591,7 +591,7 @@ class DeploymentTestCase(BaseCase):
                             "name": "nginx-deployment-default",
                             "resourceVersion": None,
                         },
-                        "json": {"bar": "foo"},
+                        "json": {"label_name": "bar"},
                     },
                     namespace="default",
                 ),
