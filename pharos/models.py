@@ -82,7 +82,7 @@ class Model:
 
     @property
     def variable_name(self):
-        return f"{self.name}-{self.namespace}"
+        return f"{self.name}-{self.namespace or 'default'}"
 
 
 class Pod(Model):
