@@ -29,6 +29,7 @@ class Model:
     def __init__(self, k8s_object, client):
         self.k8s_object = utils.ReadOnlyDict(k8s_object)
         self._client = client
+        self._variable_data = None
 
     def __repr__(self):
         return f"<{self.Meta.kind}: {self.name}>"
@@ -52,10 +53,9 @@ class Model:
         engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
         template = self.template
-        variable = self.variable.get()
-        self._variable = variable
+        variable = self.variable_data
         if template and variable:
-            json_spec = template_backend.render(template, variable.data, internal=False)
+            json_spec = template_backend.render(template, variable, internal=False)
             json_spec["metadata"]["resourceVersion"] = resource_version
             self.k8s_object = utils.ReadOnlyDict(json_spec)
         else:
@@ -65,16 +65,21 @@ class Model:
         self.refresh()  # make sure we have latest resource version
         self.reload()  # make sure we use latest template
 
+        variable = self.variable_data
         self.objects.using(self._client)._update(
-            self.template, self._variable.data, self.resource_version
+            self.template, variable, self.resource_version
         )
         variable_name = f"{self.name}-{self.namespace or 'default'}"
+        variable_obj = self.variable.get()
         self.variable._update(
             "variables.yaml",
-            {"name": variable_name, "value": self._variable.data},
-            self._variable.resource_version,
+            {"name": variable_name, "value": variable},
+            variable_obj.resource_version,
             internal=True,
         )
+
+    def set_variable(self, variable):
+        self._variable_data = variable
 
     @property
     def yaml(self):
@@ -83,6 +88,13 @@ class Model:
     @property
     def variable_name(self):
         return f"{self.name}-{self.namespace or 'default'}"
+
+    @property
+    def variable_data(self):
+        if self._variable_data is not None:
+            return self._variable_data
+        variable = self.variable.get()
+        return variable.data
 
 
 class Pod(Model):
