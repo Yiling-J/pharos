@@ -82,7 +82,7 @@ class QuerySet:
                 "variable_crd.yaml", {}, internal=True
             )
             time.sleep(0.1)
-        except:
+        except api_exceptions.ConflictError:
             pass
 
     def create(self, template, variables, internal=False):
@@ -97,17 +97,22 @@ class QuerySet:
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
-        api_spec.create(
+        response = api_spec.create(
             body=json_spec,
             namespace=json_spec["metadata"].get("namespace", "default"),
         )
+        instance = self.model(client=self._client, k8s_object=response.to_dict())
+        if internal:
+            return instance
 
+        variable_name = f"{instance.name}-{instance.namespace or 'default'}"
         self._create_variable_crd()
         models.PharosVariable.objects.using(self._client).create(
             "variables.yaml",
             {"name": variable_name, "value": variables},
             internal=True,
         )
+        return instance
 
     def _update(self, template, variables, resource_version, internal=False):
         template_backend = backend.TemplateBackend()
