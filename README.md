@@ -7,7 +7,7 @@ Managing Kubernetes resources in Python.
 
 ## Example
 
-### create client
+#### create client
 
 ```python
 from pharos.client import Client
@@ -23,7 +23,7 @@ client.use_context('new_context_name')
 
 ```
 
-### create client with settings
+#### create client with settings
 
 ```python
 from pharos.client import Client
@@ -35,7 +35,7 @@ client = Client('YOUR_PATH/.kube/config', disable_compress=True, chunk_size=500)
 client.settings.chunk_size
 
 ```
-### basic query syntax, follow Django ORM style. See all available resources in models.py
+#### basic query syntax, follow Django ORM style. See all available resources in models.py
 
 ```python
 from pharos.models import Deployment
@@ -76,7 +76,7 @@ pod.refresh()
 
 ```
 
-### extend existing model
+#### extend existing model
 
 ```python
 from pharos.models import Deployment
@@ -99,7 +99,7 @@ MyDeployment.objects.using(client).filter(created__gt=datetime(2010, 1, 1, tzinf
 
 ```
 
-### create your own model
+#### create your own model
 
 ```python
 from pharos.models import Model
@@ -113,7 +113,7 @@ class TestResource(Model):
 
 ```
 
-### create resource
+#### create resource
 Pharos using template engine for resource creating/updating. That means to create a resource,
 you need prepare 2 things: template and variable. template can be yaml file/python class or
 other things, depend on your template engine. Variable must be json serializable object.
@@ -140,7 +140,7 @@ Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
 ```
 
-### update resource
+#### update resource
 After creating resource, Pharos will add 2 annotations to automatically. First is the variable custom
 resource name, second is template name. With these info, Pharos can redeploy your resource.
 
