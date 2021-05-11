@@ -7,7 +7,7 @@ Managing Kubernetes resources in Python.
 
 ## Example
 
-create client
+### create client
 
 ```python
 from pharos.client import Client
@@ -23,7 +23,7 @@ client.use_context('new_context_name')
 
 ```
 
-create client with settings
+### create client with settings
 
 ```python
 from pharos.client import Client
@@ -35,7 +35,7 @@ client = Client('YOUR_PATH/.kube/config', disable_compress=True, chunk_size=500)
 client.settings.chunk_size
 
 ```
-basic query syntax, follow Django ORM style. See all available resources in models.py
+### basic query syntax, follow Django ORM style. See all available resources in models.py
 
 ```python
 from pharos.models import Deployment
@@ -76,7 +76,7 @@ pod.refresh()
 
 ```
 
-extend existing model
+### extend existing model
 
 ```python
 from pharos.models import Deployment
@@ -99,7 +99,7 @@ MyDeployment.objects.using(client).filter(created__gt=datetime(2010, 1, 1, tzinf
 
 ```
 
-create your own model
+### create your own model
 
 ```python
 from pharos.models import Model
@@ -113,7 +113,11 @@ class TestResource(Model):
 
 ```
 
-create deployment(jinja)
+### create resource
+Pharos using template engine for resource creating/updating. That means to create a resource,
+you need prepare 2 things: template and variable. template can be yaml file/python class or
+other things, depend on your template engine. Variable must be json serializable object.
+Template engine will call `render(template, variable)` to get k8s configuration json.
 
 ```python
 from jinja2 import FileSystemLoader
@@ -121,15 +125,24 @@ from pharos.models import Deployment
 from pharos.client import Client
 
 
+# jinja example, jinja_loader settings is required because pharos need to know
+# where to find template
 client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 
 
+# jinja is the default engine, for other template engines
+# client = Client('config', template_engine='your_template_engine_class')
+
+
+# here test.yaml is template and {'foo': 'bar'} is variable
 Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
 
 ```
 
-update deployment(jinja)
+### update resource
+After creating resource, Pharos will add 2 annotations to automatically. First is the variable custom
+resource name, second is template name. With these info, Pharos can redeploy your resource.
 
 ```python
 from jinja2 import FileSystemLoader
