@@ -414,7 +414,7 @@ class DeploymentTestCase(BaseCase):
     def test_update_deployment(self):
         mock_response = {
             "metadata": {
-                "name": "foobar",
+                "name": "nginx-deployment",
                 "namespace": "default",
                 "annotations": {"pharos.py/template": "test.yaml"},
             },
@@ -423,11 +423,15 @@ class DeploymentTestCase(BaseCase):
         self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
             mock_response
         )
+        self.dynamic_client.resources.get.return_value.replace.return_value.to_dict.return_value = (
+            mock_response
+        )
 
         deployment = models.Deployment(
             client=self.client,
             k8s_object={
                 "metadata": {
+                    "name": "nginx-deployment",
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
@@ -443,17 +447,14 @@ class DeploymentTestCase(BaseCase):
             [
                 mock.call.get(api_version="v1", kind="Deployment"),
                 mock.call.get(api_version="pharos.py/v1", kind="Variable"),
-                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
                 mock.call.get(api_version="v1", kind="Deployment"),
-                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
                 mock.call.get(api_version="pharos.py/v1", kind="Variable"),
             ],
         )
         self.assertSequenceEqual(
             self.dynamic_client.resources.get.return_value.method_calls,
             [
-                mock.call.get(name=None, namespace="default"),
-                mock.call.get(_continue=None, limit=100, name="foobar-default"),
+                mock.call.get(name="nginx-deployment", namespace="default"),
                 mock.call.get(
                     _continue=None, limit=100, name="nginx-deployment-default"
                 ),
@@ -489,9 +490,6 @@ class DeploymentTestCase(BaseCase):
                     },
                     namespace="default",
                 ),
-                mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
-                ),
                 mock.call.replace(
                     body={
                         "apiVersion": "pharos.py/v1",
@@ -510,7 +508,7 @@ class DeploymentTestCase(BaseCase):
     def test_update_deployment_variale(self):
         mock_response = {
             "metadata": {
-                "name": "foobar",
+                "name": "nginx-deployment",
                 "namespace": "default",
                 "annotations": {"pharos.py/template": "test.yaml"},
             },
@@ -519,11 +517,15 @@ class DeploymentTestCase(BaseCase):
         self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
             mock_response
         )
+        self.dynamic_client.resources.get.return_value.replace.return_value.to_dict.return_value = (
+            mock_response
+        )
 
         deployment = models.Deployment(
             client=self.client,
             k8s_object={
                 "metadata": {
+                    "name": "nginx-deployment",
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
@@ -539,15 +541,18 @@ class DeploymentTestCase(BaseCase):
             self.dynamic_client.resources.method_calls,
             [
                 mock.call.get(api_version="v1", kind="Deployment"),
-                mock.call.get(api_version="v1", kind="Deployment"),
                 mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+                mock.call.get(api_version="v1", kind="Deployment"),
                 mock.call.get(api_version="pharos.py/v1", kind="Variable"),
             ],
         )
         self.assertSequenceEqual(
             self.dynamic_client.resources.get.return_value.method_calls,
             [
-                mock.call.get(name=None, namespace="default"),
+                mock.call.get(name="nginx-deployment", namespace="default"),
+                mock.call.get(
+                    _continue=None, limit=100, name="nginx-deployment-default"
+                ),
                 mock.call.replace(
                     body={
                         "apiVersion": "apps/v1",
@@ -579,9 +584,6 @@ class DeploymentTestCase(BaseCase):
                         },
                     },
                     namespace="default",
-                ),
-                mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
                 ),
                 mock.call.replace(
                     body={

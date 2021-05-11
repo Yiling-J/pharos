@@ -63,17 +63,22 @@ class Model:
 
     def deploy(self):
         self.refresh()  # make sure we have latest resource version
-        self.reload()  # make sure we use latest template
 
-        variable = self.variable_data
-        self.objects.using(self._client)._update(
-            self.template, variable, self.resource_version
-        )
-        variable_name = f"{self.name}-{self.namespace or 'default'}"
         variable_obj = self.variable.get()
+        variable_data = (
+            self._variable_data
+            if self._variable_data is not None
+            else variable_obj.data
+        )
+        json_spec = self.objects.using(self._client)._update(
+            self.template, variable_data, self.resource_version
+        )
+        self.k8s_object = utils.ReadOnlyDict(json_spec)
+
+        variable_name = f"{self.name}-{self.namespace or 'default'}"
         self.variable._update(
             "variables.yaml",
-            {"name": variable_name, "value": variable},
+            {"name": variable_name, "value": variable_data},
             variable_obj.resource_version,
             internal=True,
         )
