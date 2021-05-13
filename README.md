@@ -1,4 +1,4 @@
-# Pharos(WIP)
+# Pharos
 
 ![Workflow](https://github.com/Yiling-J/pharos/actions/workflows/main.yaml/badge.svg)
 
