@@ -13,10 +13,7 @@ class ClientTestCase(TestCase):
         client = Client("test", context="foo")
         client.use_context("bar")
         expected_calls = [
-            mock.call.new_client_from_config('test', context='foo'),
-            mock.call.new_client_from_config('test', context='bar')
+            mock.call.new_client_from_config("test", context="foo"),
+            mock.call.new_client_from_config("test", context="bar"),
         ]
-        self.assertEqual(
-            k8s_mock.config.method_calls,
-            expected_calls
-        )
+        self.assertEqual(k8s_mock.config.method_calls, expected_calls)

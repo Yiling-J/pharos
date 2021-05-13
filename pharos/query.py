@@ -1,5 +1,35 @@
+import time
+from pydoc import locate
+from kubernetes.dynamic import exceptions as api_exceptions
 from pharos import iterator
 from pharos import exceptions
+from pharos import models
+from pharos import backend, jinja
+
+
+variable_spec = {
+    "apiVersion": "apiextensions.k8s.io/v1",
+    "kind": "CustomResourceDefinition",
+    "metadata": {"name": "variables.pharos.py"},
+    "spec": {
+        "group": "pharos.py",
+        "versions": [
+            {
+                "name": "v1",
+                "served": True,
+                "storage": True,
+                "schema": {
+                    "openAPIV3Schema": {
+                        "type": "object",
+                        "properties": {"json": {"type": "object"}},
+                    }
+                },
+            }
+        ],
+        "scope": "Cluster",
+        "names": {"plural": "variables", "singular": "variable", "kind": "Variable"},
+    },
+}
 
 
 class QuerySet:
@@ -45,6 +75,71 @@ class QuerySet:
         if not num:
             raise exceptions.ObjectDoesNotExist()
         raise exceptions.MultipleObjectsReturned()
+
+    def _create_variable_crd(self):
+        try:
+            models.CustomResourceDefinition.objects.using(self._client).create(
+                "variable_crd.yaml", {}, internal=True
+            )
+            time.sleep(0.1)
+        except api_exceptions.ConflictError:
+            pass
+
+    def create(self, template, variables, internal=False):
+        template_backend = backend.TemplateBackend()
+        if internal:
+            engine = jinja.JinjaEngine(self._client, internal=True)
+        else:
+            engine = locate(self._client.settings.template_engine)(self._client)
+        template_backend.set_engine(engine)
+        json_spec = template_backend.render(template, variables, internal)
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
+        )
+        response = api_spec.create(
+            body=json_spec,
+            namespace=json_spec["metadata"].get("namespace", "default"),
+        )
+        instance = self.model(client=self._client, k8s_object=response.to_dict())
+        if internal:
+            return instance
+
+        variable_name = f"{instance.name}-{instance.namespace or 'default'}"
+        self._create_variable_crd()
+        models.PharosVariable.objects.using(self._client).create(
+            "variables.yaml",
+            {"name": variable_name, "value": variables},
+            internal=True,
+        )
+        return instance
+
+    def _update(self, template, variables, resource_version, internal=False):
+        template_backend = backend.TemplateBackend()
+        if internal:
+            engine = jinja.JinjaEngine(self._client, internal=True)
+        else:
+            engine = locate(self._client.settings.template_engine)(self._client)
+        template_backend.set_engine(engine)
+        json_spec = template_backend.render(template, variables, internal)
+        json_spec["metadata"]["resourceVersion"] = resource_version
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
+        )
+        response = api_spec.replace(
+            body=json_spec,
+            namespace=json_spec["metadata"].get("namespace", "default"),
+        )
+
+        return response.to_dict()
+
+    def delete(self, name, namspace=None):
+        client = self._client.dynamic_client
+        api_spec = client.resources.get(
+            api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
+        )
+        return api_spec.delete(name, namspace)
 
     def limit(self, count):
         self._limit = count

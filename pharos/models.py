@@ -1,20 +1,35 @@
+import yaml
+from pydoc import locate
+from kubernetes.dynamic import exceptions as api_exceptions
 from pharos import managers
 from pharos import fields
+from pharos import utils
+from pharos import exceptions
+from pharos import backend
 
 
 class Model:
     name = fields.K8sApiField(path="metadata.name")
     namespace = fields.K8sApiField(path="metadata.namespace")
+    resource_version = fields.JsonPathField(path="metadata.resourceVersion")
     selector = fields.LabelSelectorField()
     field_selector = fields.FieldSelectorField()
     owner = fields.OwnerRefField()
+    variable = fields.RelatedField(
+        to="pharos.models.PharosVariable",
+        from_field="variable_name",
+        to_field="name",
+        skip_owner=True,
+    )
+    template = fields.JsonPathField(path='metadata.annotations."pharos.py/template"')
 
     objects = managers.Manager()
     _client = None
 
     def __init__(self, k8s_object, client):
-        self.k8s_object = k8s_object
+        self.k8s_object = utils.ReadOnlyDict(k8s_object)
         self._client = client
+        self._variable_data = None
 
     def __repr__(self):
         return f"<{self.Meta.kind}: {self.name}>"
@@ -27,8 +42,64 @@ class Model:
         api_spec = client.resources.get(
             api_version=self.Meta.api_version, kind=self.Meta.kind
         )
-        result = api_spec.get(name=self.name, namespace=self.namespace).to_dict()
-        self.k8s_object = result
+        result = api_spec.get(
+            name=self.name, namespace=self.namespace or "default"
+        ).to_dict()
+        self.k8s_object = utils.ReadOnlyDict(result)
+
+    def reload(self):
+        resource_version = self.resource_version
+        template_backend = backend.TemplateBackend()
+        engine = locate(self._client.settings.template_engine)(self._client)
+        template_backend.set_engine(engine)
+        template = self.template
+        variable = self.variable_data
+        if template and variable:
+            json_spec = template_backend.render(template, variable, internal=False)
+            json_spec["metadata"]["resourceVersion"] = resource_version
+            self.k8s_object = utils.ReadOnlyDict(json_spec)
+        else:
+            raise exceptions.TemplateNotValid()
+
+    def deploy(self):
+        self.refresh()  # make sure we have latest resource version
+
+        variable_obj = self.variable.get()
+        variable_data = (
+            self._variable_data
+            if self._variable_data is not None
+            else variable_obj.data
+        )
+        json_spec = self.objects.using(self._client)._update(
+            self.template, variable_data, self.resource_version
+        )
+        self.k8s_object = utils.ReadOnlyDict(json_spec)
+
+        variable_name = f"{self.name}-{self.namespace or 'default'}"
+        self.variable._update(
+            "variables.yaml",
+            {"name": variable_name, "value": variable_data},
+            variable_obj.resource_version,
+            internal=True,
+        )
+
+    def set_variable(self, variable):
+        self._variable_data = variable
+
+    @property
+    def yaml(self):
+        return yaml.dump(self.k8s_object, default_flow_style=False)
+
+    @property
+    def variable_name(self):
+        return f"{self.name}-{self.namespace or 'default'}"
+
+    @property
+    def variable_data(self):
+        if self._variable_data is not None:
+            return self._variable_data
+        variable = self.variable.get()
+        return variable.data
 
 
 class Pod(Model):
@@ -145,3 +216,17 @@ class HorizontalPodAutoscaler(Model):
     class Meta:
         api_version = "autoscaling/v2beta2"
         kind = "HorizontalPodAutoscaler"
+
+
+class CustomResourceDefinition(Model):
+    class Meta:
+        api_version = "apiextensions.k8s.io/v1"
+        kind = "CustomResourceDefinition"
+
+
+class PharosVariable(Model):
+    data = fields.JsonPathField(path="json")
+
+    class Meta:
+        api_version = "pharos.py/v1"
+        kind = "Variable"

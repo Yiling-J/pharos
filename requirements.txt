@@ -1,2 +1,4 @@
 jsonpath-ng
 kubernetes
+PyYAML
+Jinja2

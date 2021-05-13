@@ -1,25 +1,37 @@
 from datetime import datetime
+from pydoc import locate
 from jsonpath_ng.ext import parse
 from pharos import lookups
 from pharos import exceptions
 
 
 class RelatedField:
-    def __init__(self, to, through=None, skip_owner=False, to_field="selector"):
+    def __init__(
+        self,
+        to,
+        through=None,
+        skip_owner=False,
+        from_field="selector",
+        to_field="selector",
+    ):
         self.to = to
         self.through = None
         self.skip_owner = skip_owner
+        self.from_field = from_field
         self.to_field = to_field
         if through:
             self.through = through
 
     def __get__(self, obj, type=None):
+        if isinstance(self.to, str):
+            self.to = locate(self.to)
         manager = self.to.objects
         clone = manager.__class__()
         clone.model = manager.model
         clone.owner = obj
         clone._client = obj._client
         clone.skip_owner = self.skip_owner
+        clone.from_field = self.from_field
         clone.to_field = self.to_field
 
         if self.through:

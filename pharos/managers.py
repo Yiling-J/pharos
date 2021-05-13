@@ -58,7 +58,7 @@ class BaseManager:
         if not self.owner:
             return self._queryset_class(model=self.model, using=self._client)
 
-        selector = self.owner.selector
+        selector = getattr(self.owner, self.from_field, self.owner.selector)
         if self.through:
             owners = self.through.objects.using(self._client).filter(
                 selector=selector, owner=self.owner

@@ -24,3 +24,7 @@ class OperatorNotValid(Exception):
 
 class LookupNotValid(Exception):
     pass
+
+
+class TemplateNotValid(Exception):
+    pass
