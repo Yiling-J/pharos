@@ -113,11 +113,15 @@ class TestResource(Model):
 
 ```
 
-#### create resource
-Pharos using template engine for resource creating/updating. That means to create a resource,
-you need prepare 2 things: template and variable. template can be yaml file/python class or
-other things, depend on your template engine. Variable must be json serializable object.
-Template engine will call `render(template, variable)` to get k8s configuration json.
+#### template engine
+Pharos using pluggable template engine for resource creating/updating. A template engine means
+input an identifier string and a json serializable object, output json k8s configuration.
+Then Pharos can use that configuration in creating/updating.
+For example, the default template engine is Jinja, so the identifier string would be path to your yaml
+template, and json serializable object would be variables used in the template.
+
+
+#### create resource(Jinja example)
 
 ```python
 from jinja2 import FileSystemLoader
@@ -125,7 +129,7 @@ from pharos.models import Deployment
 from pharos.client import Client
 
 
-# jinja example, jinja_loader settings is required because pharos need to know
+# jinja_loader settings is required because pharos need to know
 # where to find template
 client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 
@@ -140,9 +144,7 @@ Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
 ```
 
-#### update resource
-After creating resource, Pharos will add 2 annotations to automatically. First is the variable custom
-resource name, second is template name. With these info, Pharos can redeploy your resource.
+#### update resource(Jinja example)
 
 ```python
 from jinja2 import FileSystemLoader
