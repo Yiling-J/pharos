@@ -120,6 +120,9 @@ Then Pharos can use that configuration in creating/updating.
 For example, the default template engine is Jinja, so the identifier string would be path to your yaml
 template, and json serializable object would be variables used in the template.
 
+Pharos add 2 annotations to your resource automatically, one for identifier and one for variable, in
+this way when updating resource, you don't need to repeat the same thing twice.
+
 
 #### create resource(Jinja example)
 
