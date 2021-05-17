@@ -28,3 +28,7 @@ class LookupNotValid(Exception):
 
 class TemplateNotValid(Exception):
     pass
+
+
+class ResourceNotMatch(Exception):
+    pass

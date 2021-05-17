@@ -304,6 +304,55 @@ class DeploymentTestCase(BaseCase):
         deployment.refresh()
         self.assertEqual(deployment.name, "bar")
 
+    def test_delete(self):
+        deployment = models.Deployment(
+            client=self.client,
+            k8s_object={
+                "metadata": {
+                    "name": "nginx-deployment",
+                    "annotations": {
+                        "deployment.kubernetes.io/revision": "1",
+                        "pharos.py/template": "test.yaml",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
+                    },
+                    "spec": {"selector": {"matchLabels": {"app": "test"}}},
+                }
+            },
+        )
+        mock_response = {
+            "metadata": {
+                "name": "nginx-deployment",
+                "namespace": "default",
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "1",
+                    "pharos.py/template": "test.yaml",
+                    "pharos.py/variable": "deployment-nginx-deployment-default",
+                },
+            },
+            "json": {"label_name": "foo"},
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
+            mock_response
+        )
+
+        deployment.delete()
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+                mock.call.get(api_version="v1", kind="Deployment"),
+            ],
+        )
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.get(name="nginx-deployment", namespace="default"),
+                mock.call.delete("deployment-nginx-deployment-default", None),
+                mock.call.delete("nginx-deployment", "default"),
+            ],
+        )
+
     def test_create_deployment(self):
         mock_response = {
             "metadata": {
@@ -342,7 +391,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                         },
                         "spec": {
@@ -403,13 +452,195 @@ class DeploymentTestCase(BaseCase):
                     body={
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
-                        "metadata": {"name": "foobar-default"},
+                        "metadata": {"name": "deployment-foobar-default"},
                         "json": {"label_name": "foo"},
                     },
                     namespace="default",
                 ),
             ],
         )
+
+    def test_create_deployment_namespace(self):
+        mock_response = {
+            "metadata": {
+                "name": "foobar",
+                "namespace": "test",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            }
+        }
+        self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        deployment = models.Deployment.objects.using(self.client).create(
+            "test.yaml", {"label_name": "foo"}, namespace="test"
+        )
+        self.assertEqual(deployment.template, "test.yaml")
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(
+                    api_version="apiextensions.k8s.io/v1",
+                    kind="CustomResourceDefinition",
+                ),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+            ],
+        )
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.create(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx", "foo": "label"},
+                            "annotations": {
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "deployment-nginx-deployment-test",
+                            },
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="test",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "apiextensions.k8s.io/v1",
+                        "kind": "CustomResourceDefinition",
+                        "metadata": {"name": "variables.pharos.py"},
+                        "spec": {
+                            "group": "pharos.py",
+                            "names": {
+                                "kind": "Variable",
+                                "plural": "variables",
+                                "singular": "variable",
+                            },
+                            "scope": "Cluster",
+                            "versions": [
+                                {
+                                    "name": "v1",
+                                    "schema": {
+                                        "openAPIV3Schema": {
+                                            "properties": {
+                                                "json": {
+                                                    "x-kubernetes-preserve-unknown-fields": True,
+                                                    "type": "object",
+                                                }
+                                            },
+                                            "type": "object",
+                                        }
+                                    },
+                                    "served": True,
+                                    "storage": True,
+                                }
+                            ],
+                        },
+                    },
+                    namespace="default",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "pharos.py/v1",
+                        "kind": "Variable",
+                        "metadata": {"name": "deployment-foobar-test"},
+                        "json": {"label_name": "foo"},
+                    },
+                    namespace="test",
+                ),
+            ],
+        )
+
+    def test_create_deployment_dry(self):
+        mock_response = {
+            "metadata": {
+                "name": "foobar",
+                "namespace": "default",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            }
+        }
+        self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        deployment = models.Deployment.objects.using(self.client).create(
+            "test.yaml", {"label_name": "foo"}, dry_run=True
+        )
+        self.assertEqual(deployment.template, "test.yaml")
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+            ],
+        )
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.create(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx", "foo": "label"},
+                            "annotations": {
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
+                            },
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="default",
+                    query_params=[("dryRun", "All")],
+                ),
+            ],
+        )
+
+    def test_create_deployment_wrong_resource(self):
+        mock_response = {
+            "metadata": {
+                "name": "foobar",
+                "namespace": "default",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            }
+        }
+        self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        with self.assertRaises(exceptions.ResourceNotMatch):
+            models.Service.objects.using(self.client).create(
+                "test.yaml", {"label_name": "foo"}
+            )
 
     def test_update_deployment(self):
         mock_response = {
@@ -435,7 +666,7 @@ class DeploymentTestCase(BaseCase):
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
-                        "pharos.py/variable": "nginx-deployment-default",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
                     },
                     "spec": {"selector": {"matchLabels": {"app": "test"}}},
                 }
@@ -456,7 +687,9 @@ class DeploymentTestCase(BaseCase):
             [
                 mock.call.get(name="nginx-deployment", namespace="default"),
                 mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
+                    _continue=None,
+                    limit=100,
+                    name="deployment-nginx-deployment-default",
                 ),
                 mock.call.replace(
                     body={
@@ -467,7 +700,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                             "resourceVersion": None,
                         },
@@ -489,18 +722,104 @@ class DeploymentTestCase(BaseCase):
                         },
                     },
                     namespace="default",
+                    query_params=[],
                 ),
                 mock.call.replace(
                     body={
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
                         "metadata": {
-                            "name": "nginx-deployment-default",
+                            "name": "deployment-nginx-deployment-default",
                             "resourceVersion": None,
                         },
                         "json": {"label_name": "foo"},
                     },
                     namespace="default",
+                    query_params=[],
+                ),
+            ],
+        )
+
+    def test_update_deployment_dry(self):
+        mock_response = {
+            "metadata": {
+                "name": "nginx-deployment",
+                "namespace": "default",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            },
+            "json": {"label_name": "foo"},
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
+            mock_response
+        )
+        self.dynamic_client.resources.get.return_value.replace.return_value.to_dict.return_value = (
+            mock_response
+        )
+
+        deployment = models.Deployment(
+            client=self.client,
+            k8s_object={
+                "metadata": {
+                    "name": "nginx-deployment",
+                    "annotations": {
+                        "deployment.kubernetes.io/revision": "1",
+                        "pharos.py/template": "test.yaml",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
+                    },
+                    "spec": {"selector": {"matchLabels": {"app": "test"}}},
+                }
+            },
+        )
+        deployment.deploy(dry_run=True)
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+                mock.call.get(api_version="v1", kind="Deployment"),
+            ],
+        )
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.get(name="nginx-deployment", namespace="default"),
+                mock.call.get(
+                    _continue=None,
+                    limit=100,
+                    name="deployment-nginx-deployment-default",
+                ),
+                mock.call.replace(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx", "foo": "label"},
+                            "annotations": {
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
+                            },
+                            "resourceVersion": None,
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="default",
+                    query_params=[("dryRun", "All")],
                 ),
             ],
         )
@@ -529,7 +848,7 @@ class DeploymentTestCase(BaseCase):
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
-                        "pharos.py/variable": "nginx-deployment-default",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
                     },
                     "spec": {"selector": {"matchLabels": {"app": "test"}}},
                 }
@@ -551,7 +870,9 @@ class DeploymentTestCase(BaseCase):
             [
                 mock.call.get(name="nginx-deployment", namespace="default"),
                 mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
+                    _continue=None,
+                    limit=100,
+                    name="deployment-nginx-deployment-default",
                 ),
                 mock.call.replace(
                     body={
@@ -562,7 +883,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "bar": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                             "resourceVersion": None,
                         },
@@ -584,18 +905,20 @@ class DeploymentTestCase(BaseCase):
                         },
                     },
                     namespace="default",
+                    query_params=[],
                 ),
                 mock.call.replace(
                     body={
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
                         "metadata": {
-                            "name": "nginx-deployment-default",
+                            "name": "deployment-nginx-deployment-default",
                             "resourceVersion": None,
                         },
                         "json": {"label_name": "bar"},
                     },
                     namespace="default",
+                    query_params=[],
                 ),
             ],
         )

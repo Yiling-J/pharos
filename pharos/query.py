@@ -85,61 +85,89 @@ class QuerySet:
         except api_exceptions.ConflictError:
             pass
 
-    def create(self, template, variables, internal=False):
+    def create(
+        self, template, variables, internal=False, dry_run=False, namespace=None
+    ):
         template_backend = backend.TemplateBackend()
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
         else:
             engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
-        json_spec = template_backend.render(template, variables, internal)
+        json_spec = template_backend.render(namespace, template, variables, internal)
+
+        if json_spec["kind"] != self.model.Meta.kind:
+            raise exceptions.ResourceNotMatch()
+
         client = self._client.dynamic_client
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
+
+        if dry_run:
+            response = api_spec.create(
+                body=json_spec,
+                namespace=namespace
+                or json_spec["metadata"].get("namespace")
+                or "default",
+                query_params=[("dryRun", "All")],
+            )
+            instance = self.model(client=self._client, k8s_object=response.to_dict())
+            return instance
+
         response = api_spec.create(
             body=json_spec,
-            namespace=json_spec["metadata"].get("namespace", "default"),
+            namespace=namespace or json_spec["metadata"].get("namespace") or "default",
         )
         instance = self.model(client=self._client, k8s_object=response.to_dict())
         if internal:
             return instance
 
-        variable_name = f"{instance.name}-{instance.namespace or 'default'}"
         self._create_variable_crd()
         models.PharosVariable.objects.using(self._client).create(
             "variables.yaml",
-            {"name": variable_name, "value": variables},
+            {"name": instance.variable_name, "value": variables},
             internal=True,
+            namespace=namespace,
         )
         return instance
 
-    def _update(self, template, variables, resource_version, internal=False):
+    def _update(
+        self,
+        namespace,
+        template,
+        variables,
+        resource_version,
+        internal=False,
+        dry_run=False,
+    ):
         template_backend = backend.TemplateBackend()
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
         else:
             engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
-        json_spec = template_backend.render(template, variables, internal)
+        json_spec = template_backend.render(namespace, template, variables, internal)
         json_spec["metadata"]["resourceVersion"] = resource_version
         client = self._client.dynamic_client
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
+        query_params = [("dryRun", "All")] if dry_run else []
         response = api_spec.replace(
             body=json_spec,
-            namespace=json_spec["metadata"].get("namespace", "default"),
+            namespace=namespace or json_spec["metadata"].get("namespace") or "default",
+            query_params=query_params,
         )
 
         return response.to_dict()
 
-    def delete(self, name, namspace=None):
+    def delete(self, name, namespace=None):
         client = self._client.dynamic_client
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
-        return api_spec.delete(name, namspace)
+        return api_spec.delete(name, namespace)
 
     def limit(self, count):
         self._limit = count
