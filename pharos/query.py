@@ -85,7 +85,7 @@ class QuerySet:
         except api_exceptions.ConflictError:
             pass
 
-    def create(self, template, variables, internal=False, dry_run=False):
+    def create(self, template, variables, internal=False, dry_run=False, namespace=None):
         template_backend = backend.TemplateBackend()
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
@@ -101,7 +101,7 @@ class QuerySet:
         if dry_run:
             response = api_spec.create(
                 body=json_spec,
-                namespace=json_spec["metadata"].get("namespace", "default"),
+                namespace=namespace or json_spec["metadata"].get("namespace") or 'default',
                 query_params=[("dryRun", "All")],
             )
             instance = self.model(client=self._client, k8s_object=response.to_dict())
@@ -109,7 +109,7 @@ class QuerySet:
 
         response = api_spec.create(
             body=json_spec,
-            namespace=json_spec["metadata"].get("namespace", "default"),
+            namespace=namespace or json_spec["metadata"].get("namespace") or 'default',
         )
         instance = self.model(client=self._client, k8s_object=response.to_dict())
         if internal:
