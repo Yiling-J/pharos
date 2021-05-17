@@ -82,11 +82,10 @@ class Model:
         if dry_run:
             return
 
-        variable_name = f"{self.name}-{self.namespace or 'default'}"
         self.variable._update(
             self.namespace,
             "variables.yaml",
-            {"name": variable_name, "value": variable_data},
+            {"name": self.variable_name, "value": variable_data},
             variable_obj.resource_version,
             internal=True,
         )
@@ -112,7 +111,7 @@ class Model:
 
     @property
     def variable_name(self):
-        return f"{self.name}-{self.namespace or 'default'}"
+        return f"{self.Meta.kind.lower()}-{self.name}-{self.namespace or 'default'}"
 
     @property
     def variable_data(self):

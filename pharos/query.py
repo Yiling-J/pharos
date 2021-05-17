@@ -123,11 +123,10 @@ class QuerySet:
         if internal:
             return instance
 
-        variable_name = f"{instance.name}-{instance.namespace or 'default'}"
         self._create_variable_crd()
         models.PharosVariable.objects.using(self._client).create(
             "variables.yaml",
-            {"name": variable_name, "value": variables},
+            {"name": instance.variable_name, "value": variables},
             internal=True,
             namespace=namespace,
         )

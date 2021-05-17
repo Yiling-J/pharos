@@ -11,9 +11,12 @@ class TemplateBackend:
     def update_annotations(self, namespace, json_spec, template, variables):
         extra_annotations = {
             f"{self.prefix}/template": template,
-            f"{self.prefix}/variable": f'{json_spec["metadata"]["name"]}-{namespace or json_spec["metadata"].get("namespace") or "default"}',
+            f"{self.prefix}/variable": f'{json_spec["kind"].lower()}-{json_spec["metadata"]["name"]}-{namespace or json_spec["metadata"].get("namespace") or "default"}',
         }
-        if "annotations" in json_spec["metadata"]:
+        if (
+            "annotations" in json_spec["metadata"]
+            and json_spec["metadata"]["annotations"]
+        ):
             json_spec["metadata"]["annotations"].update(extra_annotations)
         else:
             json_spec["metadata"]["annotations"] = extra_annotations

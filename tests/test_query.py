@@ -313,7 +313,7 @@ class DeploymentTestCase(BaseCase):
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
-                        "pharos.py/variable": "nginx-deployment-default",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
                     },
                     "spec": {"selector": {"matchLabels": {"app": "test"}}},
                 }
@@ -326,7 +326,7 @@ class DeploymentTestCase(BaseCase):
                 "annotations": {
                     "deployment.kubernetes.io/revision": "1",
                     "pharos.py/template": "test.yaml",
-                    "pharos.py/variable": "nginx-deployment-default",
+                    "pharos.py/variable": "deployment-nginx-deployment-default",
                 },
             },
             "json": {"label_name": "foo"},
@@ -348,7 +348,7 @@ class DeploymentTestCase(BaseCase):
             self.dynamic_client.resources.get.return_value.method_calls,
             [
                 mock.call.get(name="nginx-deployment", namespace="default"),
-                mock.call.delete("nginx-deployment-default", None),
+                mock.call.delete("deployment-nginx-deployment-default", None),
                 mock.call.delete("nginx-deployment", "default"),
             ],
         )
@@ -391,7 +391,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                         },
                         "spec": {
@@ -452,7 +452,7 @@ class DeploymentTestCase(BaseCase):
                     body={
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
-                        "metadata": {"name": "foobar-default"},
+                        "metadata": {"name": "deployment-foobar-default"},
                         "json": {"label_name": "foo"},
                     },
                     namespace="default",
@@ -498,7 +498,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-test",
+                                "pharos.py/variable": "deployment-nginx-deployment-test",
                             },
                         },
                         "spec": {
@@ -559,7 +559,7 @@ class DeploymentTestCase(BaseCase):
                     body={
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
-                        "metadata": {"name": "foobar-test"},
+                        "metadata": {"name": "deployment-foobar-test"},
                         "json": {"label_name": "foo"},
                     },
                     namespace="test",
@@ -600,7 +600,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                         },
                         "spec": {
@@ -666,7 +666,7 @@ class DeploymentTestCase(BaseCase):
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
-                        "pharos.py/variable": "nginx-deployment-default",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
                     },
                     "spec": {"selector": {"matchLabels": {"app": "test"}}},
                 }
@@ -687,7 +687,9 @@ class DeploymentTestCase(BaseCase):
             [
                 mock.call.get(name="nginx-deployment", namespace="default"),
                 mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
+                    _continue=None,
+                    limit=100,
+                    name="deployment-nginx-deployment-default",
                 ),
                 mock.call.replace(
                     body={
@@ -698,7 +700,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                             "resourceVersion": None,
                         },
@@ -727,7 +729,7 @@ class DeploymentTestCase(BaseCase):
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
                         "metadata": {
-                            "name": "nginx-deployment-default",
+                            "name": "deployment-nginx-deployment-default",
                             "resourceVersion": None,
                         },
                         "json": {"label_name": "foo"},
@@ -762,7 +764,7 @@ class DeploymentTestCase(BaseCase):
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
-                        "pharos.py/variable": "nginx-deployment-default",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
                     },
                     "spec": {"selector": {"matchLabels": {"app": "test"}}},
                 }
@@ -782,7 +784,9 @@ class DeploymentTestCase(BaseCase):
             [
                 mock.call.get(name="nginx-deployment", namespace="default"),
                 mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
+                    _continue=None,
+                    limit=100,
+                    name="deployment-nginx-deployment-default",
                 ),
                 mock.call.replace(
                     body={
@@ -793,7 +797,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "foo": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                             "resourceVersion": None,
                         },
@@ -844,7 +848,7 @@ class DeploymentTestCase(BaseCase):
                     "annotations": {
                         "deployment.kubernetes.io/revision": "1",
                         "pharos.py/template": "test.yaml",
-                        "pharos.py/variable": "nginx-deployment-default",
+                        "pharos.py/variable": "deployment-nginx-deployment-default",
                     },
                     "spec": {"selector": {"matchLabels": {"app": "test"}}},
                 }
@@ -866,7 +870,9 @@ class DeploymentTestCase(BaseCase):
             [
                 mock.call.get(name="nginx-deployment", namespace="default"),
                 mock.call.get(
-                    _continue=None, limit=100, name="nginx-deployment-default"
+                    _continue=None,
+                    limit=100,
+                    name="deployment-nginx-deployment-default",
                 ),
                 mock.call.replace(
                     body={
@@ -877,7 +883,7 @@ class DeploymentTestCase(BaseCase):
                             "labels": {"app": "nginx", "bar": "label"},
                             "annotations": {
                                 "pharos.py/template": "test.yaml",
-                                "pharos.py/variable": "nginx-deployment-default",
+                                "pharos.py/variable": "deployment-nginx-deployment-default",
                             },
                             "resourceVersion": None,
                         },
@@ -906,7 +912,7 @@ class DeploymentTestCase(BaseCase):
                         "apiVersion": "pharos.py/v1",
                         "kind": "Variable",
                         "metadata": {
-                            "name": "nginx-deployment-default",
+                            "name": "deployment-nginx-deployment-default",
                             "resourceVersion": None,
                         },
                         "json": {"label_name": "bar"},
