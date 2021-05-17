@@ -339,7 +339,7 @@ class DeploymentTestCase(BaseCase):
         self.assertSequenceEqual(
             self.dynamic_client.resources.method_calls,
             [
-                mock.call.get(api_version='v1', kind='Deployment'),
+                mock.call.get(api_version="v1", kind="Deployment"),
                 mock.call.get(api_version="pharos.py/v1", kind="Variable"),
                 mock.call.get(api_version="v1", kind="Deployment"),
             ],
@@ -347,10 +347,10 @@ class DeploymentTestCase(BaseCase):
         self.assertSequenceEqual(
             self.dynamic_client.resources.get.return_value.method_calls,
             [
-                mock.call.get(name='nginx-deployment', namespace='default'),
-                mock.call.delete('nginx-deployment-default', None),
-                mock.call.delete('nginx-deployment', 'default')
-            ]
+                mock.call.get(name="nginx-deployment", namespace="default"),
+                mock.call.delete("nginx-deployment-default", None),
+                mock.call.delete("nginx-deployment", "default"),
+            ],
         )
 
     def test_create_deployment(self):
@@ -472,7 +472,7 @@ class DeploymentTestCase(BaseCase):
             mock_response
         )
         deployment = models.Deployment.objects.using(self.client).create(
-            "test.yaml", {"label_name": "foo"}, namespace='test'
+            "test.yaml", {"label_name": "foo"}, namespace="test"
         )
         self.assertEqual(deployment.template, "test.yaml")
         self.assertSequenceEqual(
@@ -625,6 +625,22 @@ class DeploymentTestCase(BaseCase):
                 ),
             ],
         )
+
+    def test_create_deployment_wrong_resource(self):
+        mock_response = {
+            "metadata": {
+                "name": "foobar",
+                "namespace": "default",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            }
+        }
+        self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        with self.assertRaises(exceptions.ResourceNotMatch):
+            models.Service.objects.using(self.client).create(
+                "test.yaml", {"label_name": "foo"}
+            )
 
     def test_update_deployment(self):
         mock_response = {

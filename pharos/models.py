@@ -72,7 +72,11 @@ class Model:
         )
 
         json_spec = self.objects.using(self._client)._update(
-            self.namespace, self.template, variable_data, self.resource_version, dry_run=dry_run
+            self.namespace,
+            self.template,
+            variable_data,
+            self.resource_version,
+            dry_run=dry_run,
         )
         self.k8s_object = utils.ReadOnlyDict(json_spec)
         if dry_run:

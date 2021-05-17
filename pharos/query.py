@@ -85,7 +85,9 @@ class QuerySet:
         except api_exceptions.ConflictError:
             pass
 
-    def create(self, template, variables, internal=False, dry_run=False, namespace=None):
+    def create(
+        self, template, variables, internal=False, dry_run=False, namespace=None
+    ):
         template_backend = backend.TemplateBackend()
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
@@ -93,6 +95,10 @@ class QuerySet:
             engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
         json_spec = template_backend.render(namespace, template, variables, internal)
+
+        if json_spec["kind"] != self.model.Meta.kind:
+            raise exceptions.ResourceNotMatch()
+
         client = self._client.dynamic_client
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
@@ -101,7 +107,9 @@ class QuerySet:
         if dry_run:
             response = api_spec.create(
                 body=json_spec,
-                namespace=namespace or json_spec["metadata"].get("namespace") or 'default',
+                namespace=namespace
+                or json_spec["metadata"].get("namespace")
+                or "default",
                 query_params=[("dryRun", "All")],
             )
             instance = self.model(client=self._client, k8s_object=response.to_dict())
@@ -109,7 +117,7 @@ class QuerySet:
 
         response = api_spec.create(
             body=json_spec,
-            namespace=namespace or json_spec["metadata"].get("namespace") or 'default',
+            namespace=namespace or json_spec["metadata"].get("namespace") or "default",
         )
         instance = self.model(client=self._client, k8s_object=response.to_dict())
         if internal:
@@ -121,12 +129,18 @@ class QuerySet:
             "variables.yaml",
             {"name": variable_name, "value": variables},
             internal=True,
-            namespace=namespace
+            namespace=namespace,
         )
         return instance
 
     def _update(
-            self, namespace, template, variables, resource_version, internal=False, dry_run=False
+        self,
+        namespace,
+        template,
+        variables,
+        resource_version,
+        internal=False,
+        dry_run=False,
     ):
         template_backend = backend.TemplateBackend()
         if internal:
@@ -143,7 +157,7 @@ class QuerySet:
         query_params = [("dryRun", "All")] if dry_run else []
         response = api_spec.replace(
             body=json_spec,
-            namespace=namespace or json_spec["metadata"].get("namespace") or 'default',
+            namespace=namespace or json_spec["metadata"].get("namespace") or "default",
             query_params=query_params,
         )
 
