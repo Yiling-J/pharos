@@ -61,7 +61,7 @@ class Model:
         else:
             raise exceptions.TemplateNotValid()
 
-    def deploy(self):
+    def deploy(self, dry_run=False):
         self.refresh()  # make sure we have latest resource version
 
         variable_obj = self.variable.get()
@@ -70,10 +70,13 @@ class Model:
             if self._variable_data is not None
             else variable_obj.data
         )
+
         json_spec = self.objects.using(self._client)._update(
-            self.template, variable_data, self.resource_version
+            self.template, variable_data, self.resource_version, dry_run=dry_run
         )
         self.k8s_object = utils.ReadOnlyDict(json_spec)
+        if dry_run:
+            return
 
         variable_name = f"{self.name}-{self.namespace or 'default'}"
         self.variable._update(

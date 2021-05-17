@@ -85,7 +85,7 @@ class QuerySet:
         except api_exceptions.ConflictError:
             pass
 
-    def create(self, template, variables, internal=False):
+    def create(self, template, variables, internal=False, dry_run=False):
         template_backend = backend.TemplateBackend()
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
@@ -97,6 +97,16 @@ class QuerySet:
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
+
+        if dry_run:
+            response = api_spec.create(
+                body=json_spec,
+                namespace=json_spec["metadata"].get("namespace", "default"),
+                query_params=[("dryRun", "All")],
+            )
+            instance = self.model(client=self._client, k8s_object=response.to_dict())
+            return instance
+
         response = api_spec.create(
             body=json_spec,
             namespace=json_spec["metadata"].get("namespace", "default"),
@@ -114,7 +124,9 @@ class QuerySet:
         )
         return instance
 
-    def _update(self, template, variables, resource_version, internal=False):
+    def _update(
+        self, template, variables, resource_version, internal=False, dry_run=False
+    ):
         template_backend = backend.TemplateBackend()
         if internal:
             engine = jinja.JinjaEngine(self._client, internal=True)
@@ -127,9 +139,11 @@ class QuerySet:
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
+        query_params = [("dryRun", "All")] if dry_run else []
         response = api_spec.replace(
             body=json_spec,
             namespace=json_spec["metadata"].get("namespace", "default"),
+            query_params=query_params,
         )
 
         return response.to_dict()
