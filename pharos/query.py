@@ -121,6 +121,7 @@ class QuerySet:
             "variables.yaml",
             {"name": variable_name, "value": variables},
             internal=True,
+            namespace=namespace
         )
         return instance
 

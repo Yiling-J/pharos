@@ -460,6 +460,113 @@ class DeploymentTestCase(BaseCase):
             ],
         )
 
+    def test_create_deployment_namespace(self):
+        mock_response = {
+            "metadata": {
+                "name": "foobar",
+                "namespace": "test",
+                "annotations": {"pharos.py/template": "test.yaml"},
+            }
+        }
+        self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
+            mock_response
+        )
+        deployment = models.Deployment.objects.using(self.client).create(
+            "test.yaml", {"label_name": "foo"}, namespace='test'
+        )
+        self.assertEqual(deployment.template, "test.yaml")
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version="v1", kind="Deployment"),
+                mock.call.get(
+                    api_version="apiextensions.k8s.io/v1",
+                    kind="CustomResourceDefinition",
+                ),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+            ],
+        )
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.create(
+                    body={
+                        "apiVersion": "apps/v1",
+                        "kind": "Deployment",
+                        "metadata": {
+                            "name": "nginx-deployment",
+                            "labels": {"app": "nginx", "foo": "label"},
+                            "annotations": {
+                                "pharos.py/template": "test.yaml",
+                                "pharos.py/variable": "nginx-deployment-test",
+                            },
+                        },
+                        "spec": {
+                            "replicas": 3,
+                            "selector": {"matchLabels": {"app": "nginx"}},
+                            "template": {
+                                "metadata": {"labels": {"app": "nginx"}},
+                                "spec": {
+                                    "containers": [
+                                        {
+                                            "name": "nginx",
+                                            "image": "nginx:1.14.2",
+                                            "ports": [{"containerPort": 80}],
+                                        }
+                                    ]
+                                },
+                            },
+                        },
+                    },
+                    namespace="test",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "apiextensions.k8s.io/v1",
+                        "kind": "CustomResourceDefinition",
+                        "metadata": {"name": "variables.pharos.py"},
+                        "spec": {
+                            "group": "pharos.py",
+                            "names": {
+                                "kind": "Variable",
+                                "plural": "variables",
+                                "singular": "variable",
+                            },
+                            "scope": "Cluster",
+                            "versions": [
+                                {
+                                    "name": "v1",
+                                    "schema": {
+                                        "openAPIV3Schema": {
+                                            "properties": {
+                                                "json": {
+                                                    "x-kubernetes-preserve-unknown-fields": True,
+                                                    "type": "object",
+                                                }
+                                            },
+                                            "type": "object",
+                                        }
+                                    },
+                                    "served": True,
+                                    "storage": True,
+                                }
+                            ],
+                        },
+                    },
+                    namespace="default",
+                ),
+                mock.call.create(
+                    body={
+                        "apiVersion": "pharos.py/v1",
+                        "kind": "Variable",
+                        "metadata": {"name": "foobar-test"},
+                        "json": {"label_name": "foo"},
+                    },
+                    namespace="test",
+                ),
+            ],
+        )
+
     def test_create_deployment_dry(self):
         mock_response = {
             "metadata": {
