@@ -92,7 +92,7 @@ class QuerySet:
         else:
             engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
-        json_spec = template_backend.render(template, variables, internal)
+        json_spec = template_backend.render(namespace, template, variables, internal)
         client = self._client.dynamic_client
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
@@ -125,7 +125,7 @@ class QuerySet:
         return instance
 
     def _update(
-        self, template, variables, resource_version, internal=False, dry_run=False
+            self, namespace, template, variables, resource_version, internal=False, dry_run=False
     ):
         template_backend = backend.TemplateBackend()
         if internal:
@@ -133,7 +133,7 @@ class QuerySet:
         else:
             engine = locate(self._client.settings.template_engine)(self._client)
         template_backend.set_engine(engine)
-        json_spec = template_backend.render(template, variables, internal)
+        json_spec = template_backend.render(namespace, template, variables, internal)
         json_spec["metadata"]["resourceVersion"] = resource_version
         client = self._client.dynamic_client
         api_spec = client.resources.get(
@@ -142,7 +142,7 @@ class QuerySet:
         query_params = [("dryRun", "All")] if dry_run else []
         response = api_spec.replace(
             body=json_spec,
-            namespace=json_spec["metadata"].get("namespace", "default"),
+            namespace=namespace or json_spec["metadata"].get("namespace") or 'default',
             query_params=query_params,
         )
 

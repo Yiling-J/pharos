@@ -72,7 +72,7 @@ class Model:
         )
 
         json_spec = self.objects.using(self._client)._update(
-            self.template, variable_data, self.resource_version, dry_run=dry_run
+            self.namespace, self.template, variable_data, self.resource_version, dry_run=dry_run
         )
         self.k8s_object = utils.ReadOnlyDict(json_spec)
         if dry_run:
@@ -80,6 +80,7 @@ class Model:
 
         variable_name = f"{self.name}-{self.namespace or 'default'}"
         self.variable._update(
+            self.namespace,
             "variables.yaml",
             {"name": variable_name, "value": variable_data},
             variable_obj.resource_version,
