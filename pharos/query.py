@@ -148,12 +148,12 @@ class QuerySet:
 
         return response.to_dict()
 
-    def delete(self, name, namspace=None):
+    def delete(self, name, namespace=None):
         client = self._client.dynamic_client
         api_spec = client.resources.get(
             api_version=self.model.Meta.api_version, kind=self.model.Meta.kind
         )
-        return api_spec.delete(name, namspace)
+        return api_spec.delete(name, namespace)
 
     def limit(self, count):
         self._limit = count

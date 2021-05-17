@@ -304,6 +304,55 @@ class DeploymentTestCase(BaseCase):
         deployment.refresh()
         self.assertEqual(deployment.name, "bar")
 
+    def test_delete(self):
+        deployment = models.Deployment(
+            client=self.client,
+            k8s_object={
+                "metadata": {
+                    "name": "nginx-deployment",
+                    "annotations": {
+                        "deployment.kubernetes.io/revision": "1",
+                        "pharos.py/template": "test.yaml",
+                        "pharos.py/variable": "nginx-deployment-default",
+                    },
+                    "spec": {"selector": {"matchLabels": {"app": "test"}}},
+                }
+            },
+        )
+        mock_response = {
+            "metadata": {
+                "name": "nginx-deployment",
+                "namespace": "default",
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "1",
+                    "pharos.py/template": "test.yaml",
+                    "pharos.py/variable": "nginx-deployment-default",
+                },
+            },
+            "json": {"label_name": "foo"},
+        }
+        self.dynamic_client.resources.get.return_value.get.return_value.to_dict.return_value = (
+            mock_response
+        )
+
+        deployment.delete()
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.method_calls,
+            [
+                mock.call.get(api_version='v1', kind='Deployment'),
+                mock.call.get(api_version="pharos.py/v1", kind="Variable"),
+                mock.call.get(api_version="v1", kind="Deployment"),
+            ],
+        )
+        self.assertSequenceEqual(
+            self.dynamic_client.resources.get.return_value.method_calls,
+            [
+                mock.call.get(name='nginx-deployment', namespace='default'),
+                mock.call.delete('nginx-deployment-default', None),
+                mock.call.delete('nginx-deployment', 'default')
+            ]
+        )
+
     def test_create_deployment(self):
         mock_response = {
             "metadata": {

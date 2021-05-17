@@ -86,6 +86,18 @@ class Model:
             internal=True,
         )
 
+    def delete(self):
+        self.refresh()
+
+        try:
+            self.variable.delete(name=self.variable_name)
+        except api_exceptions.NotFoundError:
+            pass
+
+        self.objects.using(self._client).delete(
+            name=self.name, namespace=self.namespace
+        )
+
     def set_variable(self, variable):
         self._variable_data = variable
 
