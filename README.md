@@ -72,6 +72,12 @@ deployments = Deployment.objects.using(client).filter(namespace='default')
 deployment = deployments[0]
 deployment = Deployment.objects.using(client).get(name='foo', namespace='default')
 
+# print configuration yaml
+print(deployment.yaml)
+
+# print configuration json object
+print(deployment.k8s_object)
+
 # get pods owned by deployment, notice that no ```.using(client)``` here
 pods = deployment.pods.all()
 
