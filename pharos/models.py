@@ -249,3 +249,10 @@ class PharosVariable(Model):
     class Meta:
         api_version = "pharos.py/v1"
         kind = "Variable"
+
+
+class ServiceAccount(Model):
+
+    class Meta:
+        api_version = "v1"
+        kind = "ServiceAccount"
