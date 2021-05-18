@@ -35,6 +35,23 @@ client = Client('YOUR_PATH/.kube/config', disable_compress=True, chunk_size=500)
 client.settings.chunk_size
 
 ```
+
+Pharos default settings
+
+```python
+{
+    "disable_compress": False,  # disable gzip
+    "enable_chunk": True,  # enable chunk
+    "chunk_size": 200,  # chunk size
+    "template_engine": "pharos.jinja.JinjaEngine",  # templating engine
+    "jinja_loader": None,  # loader for Jinja template
+}
+
+```
+
+If you enable [chunk](https://kubernetes.io/docs/reference/using-api/api-concepts/#retrieving-large-results-sets-in-chunks), Pharos will use `limit/continue` parameters to retrieve API results in small chunks, avoiding large responses.
+
+
 #### basic query syntax, follow Django ORM style. See all available resources in models.py
 
 ```python
@@ -142,8 +159,13 @@ client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 
 
 # here test.yaml is template and {'foo': 'bar'} is variable
-Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
+deployment = Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
+
+# access template and variable
+template = deployment.template
+variable = deployment.variable.get()
+variable_data = variable.data
 
 ```
 
