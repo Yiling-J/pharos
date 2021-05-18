@@ -9,7 +9,6 @@ Managing Kubernetes resources in Python.
 
 ```
 pip install pharos-k8s
-
 ```
 
 ## Example
