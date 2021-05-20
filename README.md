@@ -103,6 +103,9 @@ pods_refreshed = pods.all()
 pod = pods[0]
 pod.refresh()
 
+# delete instance
+deployment.delete()
+
 ```
 
 #### extend existing model
@@ -128,17 +131,27 @@ MyDeployment.objects.using(client).filter(created__gt=datetime(2010, 1, 1, tzinf
 
 ```
 
-#### create your own model
+#### custom resource example
 
+create custom resource definition
+```python
+from pharos.models import CustomResourceDefinition
+
+
+CustomResourceDefinition.objects.using(client).create('crontab.yaml', {})
+
+```
+
+add model
 ```python
 from pharos.models import Model
 
 
-class TestResource(Model):
+class CronTab(Model):
 
     class Meta:
-        api_version = "v1"
-        kind = "TestResource"
+        api_version = "stable.example.com/v1"
+        kind = "CronTab"
 
 ```
 
@@ -165,14 +178,14 @@ from pharos.client import Client
 # where to find template
 client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 
-
 # jinja is the default engine, for other template engines
 # client = Client('config', template_engine='your_template_engine_class')
-
 
 # here test.yaml is template and {'foo': 'bar'} is variable
 deployment = Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
+# dry run
+deployment = Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'}, dry_run=True)
 
 # access template and variable
 template = deployment.template
@@ -191,11 +204,12 @@ from pharos.client import Client
 
 client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 
-
 # template change
 deployment = Deployment.objects.using(client).all()[0]
 deployment.deploy()
 
+# dry run
+deployment.deploy(dry_run=True)
 
 # also change variable
 deployment.set_variable({'bar': 'foo'})
