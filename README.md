@@ -103,9 +103,6 @@ pods_refreshed = pods.all()
 pod = pods[0]
 pod.refresh()
 
-# delete instance
-deployment.delete()
-
 ```
 
 #### extend existing model
@@ -214,5 +211,19 @@ deployment.deploy(dry_run=True)
 # also change variable
 deployment.set_variable({'bar': 'foo'})
 deployment.deploy()
+
+```
+
+#### delete resource
+
+```python
+from pharos.models import Deployment
+from pharos.client import Client
+
+
+client = Client('YOUR_PATH/.kube/config')
+
+deployment = Deployment.objects.using(client).filter(namespace='default')[0]
+deployment.delete()
 
 ```
