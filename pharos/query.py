@@ -1,4 +1,5 @@
 import time
+import yaml
 from pydoc import locate
 from kubernetes.dynamic import exceptions as api_exceptions
 from pharos import iterator
@@ -84,6 +85,13 @@ class QuerySet:
             time.sleep(0.1)
         except api_exceptions.ConflictError:
             pass
+
+    def render(self, template, variables, namespace=None):
+        template_backend = backend.TemplateBackend()
+        engine = locate(self._client.settings.template_engine)(self._client)
+        template_backend.set_engine(engine)
+        json_spec = template_backend.render(namespace, template, variables, False)
+        print(yaml.dump(json_spec, default_flow_style=False))
 
     def create(
         self, template, variables, internal=False, dry_run=False, namespace=None

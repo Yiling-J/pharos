@@ -471,6 +471,11 @@ class DeploymentTestCase(BaseCase):
         self.dynamic_client.resources.get.return_value.create.return_value.to_dict.return_value = (
             mock_response
         )
+
+        models.Deployment.objects.using(self.client).render(
+            "test.yaml", {"label_name": "foo"}, namespace="test"
+        )
+
         deployment = models.Deployment.objects.using(self.client).create(
             "test.yaml", {"label_name": "foo"}, namespace="test"
         )

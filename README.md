@@ -178,6 +178,9 @@ client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 # jinja is the default engine, for other template engines
 # client = Client('config', template_engine='your_template_engine_class')
 
+# render template and print yaml
+Deployment.objects.using(client).render('test.yaml', {'foo': 'bar'})
+
 # here test.yaml is template and {'foo': 'bar'} is variable
 deployment = Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
