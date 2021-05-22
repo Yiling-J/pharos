@@ -69,6 +69,8 @@ class QueryField:
         raise NotImplementedError()
 
     def get_lookup(self, op):
+        if op not in self.valid_lookups:
+            raise exceptions.LookupNotValid(f"Lookup: {op} is not valid!")
         return self.valid_lookups[op]
 
     @classmethod
@@ -76,7 +78,7 @@ class QueryField:
         if issubclass(lookup, lookups.Lookup):
             cls.lookups.append(lookup)
             return
-        raise exceptions.LookupNotValid()
+        raise exceptions.LookupNotValid(f"{lookup} is not valid!")
 
 
 class JsonPathField(QueryField):

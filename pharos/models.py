@@ -59,7 +59,7 @@ class Model:
             json_spec["metadata"]["resourceVersion"] = resource_version
             self.k8s_object = utils.ReadOnlyDict(json_spec)
         else:
-            raise exceptions.TemplateNotValid()
+            raise exceptions.TemplateNotValid("Load template/variable failed!")
 
     def deploy(self, dry_run=False):
         self.refresh()  # make sure we have latest resource version

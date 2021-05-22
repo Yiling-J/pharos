@@ -59,10 +59,10 @@ class QuerySet:
             field = k
             if "__" in k:
                 field, op = k.rsplit("__", 1)
-            field = getattr(clone.model, field, None)
-            if not field:
-                raise exceptions.FieldDoesNotExist()
-            clone._query.append({"field": field, "value": v, "op": op})
+            field_descriptor = getattr(clone.model, field, None)
+            if not field_descriptor:
+                raise exceptions.FieldDoesNotExist(f"{field} not exist")
+            clone._query.append({"field": field_descriptor, "value": v, "op": op})
         return clone
 
     def all(self):
@@ -74,8 +74,12 @@ class QuerySet:
         if num == 1:
             return clone._result_cache[0]
         if not num:
-            raise exceptions.ObjectDoesNotExist()
-        raise exceptions.MultipleObjectsReturned()
+            raise exceptions.ObjectDoesNotExist(
+                f"{self.model.Meta.kind} matching result does not exist."
+            )
+        raise exceptions.MultipleObjectsReturned(
+            f"get() returned more than one {self.model.Meta.kind} -- it returned {num}!"
+        )
 
     def _create_variable_crd(self):
         try:
@@ -105,7 +109,9 @@ class QuerySet:
         json_spec = template_backend.render(namespace, template, variables, internal)
 
         if json_spec["kind"] != self.model.Meta.kind:
-            raise exceptions.ResourceNotMatch()
+            raise exceptions.ResourceNotMatch(
+                f'{json_spec["kind"]} does not match {self.model.Meta.kind}!'
+            )
 
         client = self._client.dynamic_client
         api_spec = client.resources.get(
@@ -251,7 +257,9 @@ class QuerySet:
 
     def _fetch_all(self):
         if not self._client:
-            raise exceptions.ClientNotSet()
+            raise exceptions.ClientNotSet(
+                "Client not set yet, adding .using(client) to your query."
+            )
 
         if self._result_cache is None:
             self._get_result()
