@@ -90,6 +90,33 @@ class Model:
             internal=True,
         )
 
+    def sync(self, template, variable, dry_run=False):
+        self.refresh()
+
+        json_spec = self.objects.using(self._client)._update(
+            self.namespace,
+            template,
+            variable,
+            self.resource_version,
+            dry_run=dry_run,
+        )
+        self.k8s_object = utils.ReadOnlyDict(json_spec)
+        if dry_run:
+            return
+
+        try:
+            self.variable.delete(name=self.variable_name)
+        except api_exceptions.NotFoundError:
+            pass
+
+        self.objects.using(self._client)._create_variable_crd()
+        PharosVariable.objects.using(self._client).create(
+            "variables.yaml",
+            {"name": self.variable_name, "value": variable},
+            internal=True,
+            namespace=self.namespace,
+        )
+
     def delete(self):
         self.refresh()
 
@@ -252,7 +279,6 @@ class PharosVariable(Model):
 
 
 class ServiceAccount(Model):
-
     class Meta:
         api_version = "v1"
         kind = "ServiceAccount"
