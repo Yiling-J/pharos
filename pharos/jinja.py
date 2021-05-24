@@ -7,8 +7,8 @@ def to_yaml(value):
 
 
 class JinjaEngine:
-    def __init__(self, client, internal=False):
-        loader = client.settings.jinja_loader
+    def __init__(self, client, internal=False, loader=None):
+        loader = loader if loader else client.settings.jinja_loader
         if internal:
             loader = PackageLoader("pharos", "templates")
         elif not loader:

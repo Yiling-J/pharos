@@ -104,12 +104,12 @@ class Model:
         if dry_run:
             return
 
+        self.objects.using(self._client)._create_variable_crd()
         try:
             self.variable.delete(name=self.variable_name)
         except api_exceptions.NotFoundError:
             pass
 
-        self.objects.using(self._client)._create_variable_crd()
         PharosVariable.objects.using(self._client).create(
             "variables.yaml",
             {"name": self.variable_name, "value": variable},
