@@ -15,7 +15,7 @@ class BaseManager:
         self._client = None
 
     def __str__(self):
-        return "%s.%s" % (self.model, self.name)
+        return f"<{self.model.Meta.kind} manager>"
 
     def __class_getitem__(cls, *args, **kwargs):
         return cls
