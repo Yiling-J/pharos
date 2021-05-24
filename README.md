@@ -178,6 +178,9 @@ client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
 # jinja is the default engine, for other template engines
 # client = Client('config', template_engine='your_template_engine_class')
 
+# render template and print yaml
+Deployment.objects.using(client).render('test.yaml', {'foo': 'bar'})
+
 # here test.yaml is template and {'foo': 'bar'} is variable
 deployment = Deployment.objects.using(client).create('test.yaml', {'foo': 'bar'})
 
@@ -213,6 +216,26 @@ deployment.set_variable({'bar': 'foo'})
 deployment.deploy()
 
 ```
+
+#### migrate existing resource
+migrate will replace existing resource with provided template and variable
+
+```python
+from jinja2 import FileSystemLoader
+from pharos.models import Deployment
+from pharos.client import Client
+
+
+client = Client('config', jinja_loader=FileSystemLoader('./templates/'))
+
+deployment = Deployment.objects.using(client).all()[0]
+deployment.sync('test.yaml', {'foo': 'bar'})
+
+# dry run
+deployment.sync('test.yaml', {'foo': 'bar'}, dry_run=True)
+
+```
+
 
 #### delete resource
 

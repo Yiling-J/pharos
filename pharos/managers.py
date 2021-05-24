@@ -15,7 +15,7 @@ class BaseManager:
         self._client = None
 
     def __str__(self):
-        return "%s.%s" % (self.model, self.name)
+        return f"<{self.model.Meta.kind} manager>"
 
     def __class_getitem__(cls, *args, **kwargs):
         return cls
@@ -75,6 +75,7 @@ class BaseManager:
         filterset = {self.to_field: selector}
         if not self.skip_owner:
             filterset["owner"] = self.owner
+        filterset['namespace'] = self.owner.namespace
         return self._queryset_class(
             model=self.model,
             using=self._client,

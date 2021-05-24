@@ -59,7 +59,7 @@ class Model:
             json_spec["metadata"]["resourceVersion"] = resource_version
             self.k8s_object = utils.ReadOnlyDict(json_spec)
         else:
-            raise exceptions.TemplateNotValid()
+            raise exceptions.TemplateNotValid("Load template/variable failed!")
 
     def deploy(self, dry_run=False):
         self.refresh()  # make sure we have latest resource version
@@ -88,6 +88,33 @@ class Model:
             {"name": self.variable_name, "value": variable_data},
             variable_obj.resource_version,
             internal=True,
+        )
+
+    def sync(self, template, variable, dry_run=False):
+        self.refresh()
+
+        json_spec = self.objects.using(self._client)._update(
+            self.namespace,
+            template,
+            variable,
+            self.resource_version,
+            dry_run=dry_run,
+        )
+        self.k8s_object = utils.ReadOnlyDict(json_spec)
+        if dry_run:
+            return
+
+        self.objects.using(self._client)._create_variable_crd()
+        try:
+            self.variable.delete(name=self.variable_name)
+        except api_exceptions.NotFoundError:
+            pass
+
+        PharosVariable.objects.using(self._client).create(
+            "variables.yaml",
+            {"name": self.variable_name, "value": variable},
+            internal=True,
+            namespace=self.namespace,
         )
 
     def delete(self):
@@ -252,7 +279,6 @@ class PharosVariable(Model):
 
 
 class ServiceAccount(Model):
-
     class Meta:
         api_version = "v1"
         kind = "ServiceAccount"
